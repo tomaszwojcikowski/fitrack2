@@ -36,12 +36,29 @@ jobs:
 
       - name: Fix paths for GitHub Pages subdirectory
         run: |
-          # Add base tag to HTML to set the base URL for all relative paths
-          sed -i 's|<head>|<head>\n    <base href="/fitrack2/">|' dist/index.html
+          # Fix absolute paths in index.html to include /fitrack2/ prefix
+          sed -i 's|href="/favicon.ico"|href="/fitrack2/favicon.ico"|g' dist/index.html
+          sed -i 's|src="/_expo/|src="/fitrack2/_expo/|g' dist/index.html
+          
+          # Fix asset paths in the JavaScript bundle
+          if [ -d "dist/_expo/static/js/web/" ]; then
+            find dist/_expo/static/js/web/ -type f -name "*.js" -exec sed -i 's|"/assets/|"/fitrack2/assets/|g' {} \;
+            echo "Fixed asset paths in JS bundle"
+          else
+            echo "Warning: JS bundle directory not found"
+          fi
           
           # Verify the changes
+          echo ""
           echo "Modified index.html:"
-          head -10 dist/index.html
+          cat dist/index.html
+          echo ""
+          echo "Checking asset paths in JS bundle:"
+          if [ -d "dist/_expo/static/js/web/" ]; then
+            find dist/_expo/static/js/web/ -type f -name "*.js" -exec grep -o '"/fitrack2/assets/[^"]*"' {} \; | head -5 || echo "No asset paths found in JS files"
+          else
+            echo "JS bundle directory not found for verification"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

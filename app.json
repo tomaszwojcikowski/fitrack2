@@ -31,6 +31,11 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "publicPath": "/fitrack2/"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "45b15e1f-bfc9-43cb-82c1-4ff715b3fccd"
+      }
     }
   }
 }

@@ -259,6 +259,44 @@ If the secrets are set but build still fails:
 - Check that the `EXPO_TOKEN` secret is valid and has the correct permissions
 - Try running `eas build:configure` locally first to manually link the project
 
+### Build Fails with "Generating a new Keystore is not supported in --non-interactive mode"
+
+**This is a common issue on the FIRST build attempt.**
+
+**Root Cause**: EAS Build requires Android signing credentials (a keystore) to build APKs. When credentials don't exist, EAS tries to generate them automatically, but this requires user confirmation which isn't possible in CI/CD's non-interactive mode.
+
+**Solution - One-Time Setup**:
+
+You need to generate credentials manually ONCE. After that, all subsequent CI/CD builds will work automatically.
+
+**Option 1: Generate credentials via local build (Recommended)**
+```bash
+# Install EAS CLI globally
+npm install -g eas-cli
+
+# Login to Expo
+eas login
+
+# Run a build locally (this will generate and upload credentials to EAS)
+# You can cancel the build after credentials are generated
+eas build --platform android --profile preview
+
+# Follow the prompts to generate a new keystore
+# Once generated, the credentials are stored on EAS servers
+```
+
+**Option 2: Generate credentials directly**
+```bash
+# Use the credentials command to set up Android credentials
+eas credentials
+
+# Select Android → Configure credentials → Generate new keystore
+# This creates and uploads credentials without starting a build
+```
+
+**After First-Time Setup**:
+Once credentials exist on EAS servers, all future GitHub Actions builds will work automatically. The workflow will use the stored credentials for signing APKs.
+
 ### Build Times Out or Fails
 
 **Solution**: 

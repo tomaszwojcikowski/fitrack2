@@ -60,11 +60,41 @@ jobs:
           fi
 
       - name: Build Android APK
+        id: build
+        continue-on-error: true
         run: eas build --platform android --profile ${{ steps.build-profile.outputs.profile }} --non-interactive --no-wait
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
+      - name: Handle Build Failure
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "::error::❌ Build failed - Android credentials may not be configured"
+          echo ""
+          echo "### ⚠️ Build Failed - Credentials Required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The build failed because Android signing credentials haven't been set up yet." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**This is normal for the first build attempt.**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔧 One-Time Setup Required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Generate Android credentials once by running locally:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "npm install -g eas-cli" >> $GITHUB_STEP_SUMMARY
+          echo "eas login" >> $GITHUB_STEP_SUMMARY
+          echo "eas build --platform android --profile ${{ steps.build-profile.outputs.profile }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Follow the prompts to generate a keystore. Once created, it will be stored on EAS servers." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "After this one-time setup, all future CI/CD builds will work automatically." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📖 See [ANDROID_BUILD_SETUP.md](https://github.com/${{ github.repository }}/blob/main/ANDROID_BUILD_SETUP.md#build-fails-with-generating-a-new-keystore-is-not-supported-in---non-interactive-mode) for detailed instructions." >> $GITHUB_STEP_SUMMARY
+          exit 1
+
       - name: Get build info
+        if: steps.build.outcome == 'success'
         id: build-info
         run: |
           # Get the latest build ID

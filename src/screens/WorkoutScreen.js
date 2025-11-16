@@ -13,6 +13,7 @@ import {
 import { CelebrationAnimation } from '../components';
 import { database } from '../database';
 import { AnimatedYStack, AnimatedXStack } from '../utils/animatedComponents';
+import { updateE1RM } from '../utils/e1rmCalculations';
 
 const Container = styled(YStack, {
   flex: 1,
@@ -298,19 +299,40 @@ export default function WorkoutScreen() {
     }
     
     try {
+      const repsInt = parseInt(reps, 10);
+      const weightFloat = parseFloat(weight);
+      
       await database.write(async () => {
         const loggedSetsCollection = database.collections.get('logged_sets');
         await loggedSetsCollection.create(record => {
           record.workoutLogId = workoutLog.id;
           record.exerciseId = exerciseId;
           record.setNumber = setNumber;
-          record.repsActual = parseInt(reps, 10);
-          record.weight = parseFloat(weight);
+          record.repsActual = repsInt;
+          record.weight = weightFloat;
           record.rpeActual = rpe ? parseFloat(rpe) : null;
           record.rirActual = null;
           record.isWarmup = false;
         });
       });
+      
+      // Update E1RM if this is a PR
+      try {
+        const e1rmResult = await updateE1RM(
+          database,
+          'default-user',
+          exerciseId,
+          weightFloat,
+          repsInt
+        );
+        
+        if (e1rmResult.isNewPR) {
+          console.log(`New PR! E1RM: ${e1rmResult.newE1RM} kg`);
+          // TODO: Show PR notification to user
+        }
+      } catch (error) {
+        console.error('Error updating E1RM:', error);
+      }
       
       // Mark set as logged in UI
       setExerciseSets(prev => ({

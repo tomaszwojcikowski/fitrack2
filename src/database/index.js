@@ -7,6 +7,11 @@ import Exercise from './models/Exercise';
 import ExerciseCategory from './models/ExerciseCategory';
 import WorkoutLog from './models/WorkoutLog';
 import LoggedSet from './models/LoggedSet';
+import ProgramTemplate from './models/ProgramTemplate';
+import PhaseTemplate from './models/PhaseTemplate';
+import WorkoutTemplate from './models/WorkoutTemplate';
+import TemplateExercise from './models/TemplateExercise';
+import UserE1RM from './models/UserE1RM';
 
 // Use LokiJS for web, SQLite for native (but for Expo web, we use LokiJS)
 const adapter = new LokiJSAdapter({
@@ -23,5 +28,10 @@ export const database = new Database({
     ExerciseCategory,
     WorkoutLog,
     LoggedSet,
+    ProgramTemplate,
+    PhaseTemplate,
+    WorkoutTemplate,
+    TemplateExercise,
+    UserE1RM,
   ],
 });

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
   Easing
 } from 'react-native-reanimated';
+import { AchievementUnlock } from '../components';
 
 const AnimatedYStack = Animated.createAnimatedComponent(YStack);
 const AnimatedXStack = Animated.createAnimatedComponent(XStack);
@@ -84,6 +85,8 @@ const ActivityItem = styled(XStack, {
 });
 
 export default function HomeScreen({ navigation }) {
+  const [showAchievement, setShowAchievement] = useState(false);
+  
   const headerOpacity = useSharedValue(0);
   const cardScale = useSharedValue(0.9);
   const statsOpacity = useSharedValue(0);
@@ -92,6 +95,13 @@ export default function HomeScreen({ navigation }) {
     headerOpacity.value = withTiming(1, { duration: 500, easing: Easing.ease });
     cardScale.value = withSpring(1, { damping: 15 });
     statsOpacity.value = withDelay(200, withTiming(1, { duration: 500 }));
+    
+    // Demo: Show achievement after 2 seconds
+    const timer = setTimeout(() => {
+      setShowAchievement(true);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const headerAnimStyle = useAnimatedStyle(() => ({
@@ -231,6 +241,18 @@ export default function HomeScreen({ navigation }) {
             </YStack>
           </ActivityItem>
         </Card>
+
+        <AchievementUnlock
+          visible={showAchievement}
+          onClose={() => setShowAchievement(false)}
+          achievement={{
+            type: 'streak',
+            name: '7 Day Streak',
+            description: 'You\'ve worked out for 7 days in a row! Keep up the amazing consistency.',
+            reward: '+50 XP',
+            stars: 3,
+          }}
+        />
       </Container>
     </ScrollView>
   );

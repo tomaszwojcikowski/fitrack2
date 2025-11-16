@@ -1,10 +1,13 @@
-import React from 'react';
-import { ScrollView } from 'react-native';
+import React, { useMemo } from 'react';
+import { ScrollView, Dimensions } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { CartesianChart, Line, Bar, useChartPressState } from 'victory-native';
+import { LinearGradient, vec, Circle, useFont } from '@shopify/react-native-skia';
 
 const AnimatedYStack = Animated.createAnimatedComponent(YStack);
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const Container = styled(ScrollView, {
   flex: 1,
@@ -54,23 +57,56 @@ const CardTitle = styled(TamaguiText, {
   color: '$gray12',
 });
 
-const ChartPlaceholder = styled(YStack, {
-  height: 200,
-  justifyContent: 'center',
-  alignItems: 'center',
+const ChartContainer = styled(YStack, {
+  height: 220,
+  width: '100%',
   backgroundColor: '$gray2',
   borderRadius: '$md',
+  padding: '$sm',
 });
 
-const PlaceholderText = styled(TamaguiText, {
-  fontSize: 14,
+const ChartLabel = styled(TamaguiText, {
+  fontSize: 12,
   color: '$gray10',
+  marginTop: '$xs',
   textAlign: 'center',
-  marginTop: '$md',
-  paddingHorizontal: '$lg',
 });
+
+// Generate sample data for demonstration
+const generateVolumeData = () => {
+  const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'];
+  return weeks.map((week, index) => ({
+    week: index + 1,
+    label: week,
+    volume: 8000 + Math.random() * 4000 + index * 1000,
+  }));
+};
+
+const generateE1RMData = () => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  return months.map((month, index) => ({
+    month: index + 1,
+    label: month,
+    squat: 120 + index * 3.5 + Math.random() * 5,
+    bench: 85 + index * 2 + Math.random() * 3,
+    deadlift: 155 + index * 4 + Math.random() * 5,
+  }));
+};
 
 export default function ProgressScreen() {
+  const volumeData = useMemo(() => generateVolumeData(), []);
+  const e1rmData = useMemo(() => generateE1RMData(), []);
+  
+  const { state: volumeState, isActive: volumeActive } = useChartPressState({
+    x: 0,
+    y: { volume: 0 },
+  });
+
+  const { state: e1rmState, isActive: e1rmActive } = useChartPressState({
+    x: 0,
+    y: { squat: 0, bench: 0, deadlift: 0 },
+  });
+
   return (
     <Container>
       <AnimatedYStack entering={FadeInDown.springify()}>
@@ -86,10 +122,50 @@ export default function ProgressScreen() {
             <Ionicons name="trending-up" size={24} color="#FF6B35" />
             <CardTitle>Volume Over Time</CardTitle>
           </CardHeader>
-          <ChartPlaceholder>
-            <Ionicons name="bar-chart" size={80} color="#D4D4D4" />
-            <PlaceholderText>Chart will be implemented with Victory Native</PlaceholderText>
-          </ChartPlaceholder>
+          <ChartContainer>
+            <CartesianChart
+              data={volumeData}
+              xKey="week"
+              yKeys={["volume"]}
+              domainPadding={{ left: 20, right: 20, top: 30 }}
+              chartPressState={volumeState}
+            >
+              {({ points, chartBounds }) => (
+                <>
+                  <Bar
+                    points={points.volume}
+                    chartBounds={chartBounds}
+                    color="#FF6B35"
+                    barWidth={24}
+                    roundedCorners={{
+                      topLeft: 4,
+                      topRight: 4,
+                    }}
+                  >
+                    <LinearGradient
+                      start={vec(0, 0)}
+                      end={vec(0, chartBounds.bottom)}
+                      colors={["#FF6B35", "#FF8C5A"]}
+                    />
+                  </Bar>
+                  {volumeActive && (
+                    <Circle
+                      cx={volumeState.x.position}
+                      cy={volumeState.y.volume.position}
+                      r={8}
+                      color="#FF6B35"
+                      opacity={0.8}
+                    />
+                  )}
+                </>
+              )}
+            </CartesianChart>
+            {volumeActive && (
+              <ChartLabel>
+                Week {Math.round(volumeState.x.value)}: {Math.round(volumeState.y.volume.value)} kg
+              </ChartLabel>
+            )}
+          </ChartContainer>
         </Card>
       </AnimatedYStack>
 
@@ -99,32 +175,87 @@ export default function ProgressScreen() {
             <Ionicons name="barbell" size={24} color="#FF6B35" />
             <CardTitle>Estimated 1RM Progress</CardTitle>
           </CardHeader>
-          <E1RMList>
-            <E1RMItem>
-              <ExerciseName>Squat</ExerciseName>
-              <E1RMValue>140 kg</E1RMValue>
-              <ChangeContainer>
-                <Ionicons name="arrow-up" size={16} color="#22C55E" />
-                <ChangeText>+5kg</ChangeText>
-              </ChangeContainer>
-            </E1RMItem>
-            <E1RMItem>
-              <ExerciseName>Bench Press</ExerciseName>
-              <E1RMValue>100 kg</E1RMValue>
-              <ChangeContainer>
-                <Ionicons name="arrow-up" size={16} color="#22C55E" />
-                <ChangeText>+2.5kg</ChangeText>
-              </ChangeContainer>
-            </E1RMItem>
-            <E1RMItem>
-              <ExerciseName>Deadlift</ExerciseName>
-              <E1RMValue>180 kg</E1RMValue>
-              <ChangeContainer>
-                <Ionicons name="arrow-up" size={16} color="#22C55E" />
-                <ChangeText>+10kg</ChangeText>
-              </ChangeContainer>
-            </E1RMItem>
-          </E1RMList>
+          <ChartContainer>
+            <CartesianChart
+              data={e1rmData}
+              xKey="month"
+              yKeys={["squat", "bench", "deadlift"]}
+              domainPadding={{ left: 15, right: 15, top: 30 }}
+              chartPressState={e1rmState}
+            >
+              {({ points }) => (
+                <>
+                  <Line
+                    points={points.squat}
+                    color="#FF6B35"
+                    strokeWidth={3}
+                    curveType="natural"
+                  />
+                  <Line
+                    points={points.bench}
+                    color="#004E89"
+                    strokeWidth={3}
+                    curveType="natural"
+                  />
+                  <Line
+                    points={points.deadlift}
+                    color="#00D9C0"
+                    strokeWidth={3}
+                    curveType="natural"
+                  />
+                  {e1rmActive && (
+                    <>
+                      <Circle
+                        cx={e1rmState.x.position}
+                        cy={e1rmState.y.squat.position}
+                        r={6}
+                        color="#FF6B35"
+                      />
+                      <Circle
+                        cx={e1rmState.x.position}
+                        cy={e1rmState.y.bench.position}
+                        r={6}
+                        color="#004E89"
+                      />
+                      <Circle
+                        cx={e1rmState.x.position}
+                        cy={e1rmState.y.deadlift.position}
+                        r={6}
+                        color="#00D9C0"
+                      />
+                    </>
+                  )}
+                </>
+              )}
+            </CartesianChart>
+            {e1rmActive && (
+              <XStack gap="$md" justifyContent="center" marginTop="$xs">
+                <ChartLabel style={{ color: '#FF6B35' }}>
+                  Squat: {Math.round(e1rmState.y.squat.value)} kg
+                </ChartLabel>
+                <ChartLabel style={{ color: '#004E89' }}>
+                  Bench: {Math.round(e1rmState.y.bench.value)} kg
+                </ChartLabel>
+                <ChartLabel style={{ color: '#00D9C0' }}>
+                  DL: {Math.round(e1rmState.y.deadlift.value)} kg
+                </ChartLabel>
+              </XStack>
+            )}
+          </ChartContainer>
+          <XStack gap="$md" justifyContent="center" marginTop="$md">
+            <LegendItem>
+              <LegendDot style={{ backgroundColor: '#FF6B35' }} />
+              <LegendText>Squat</LegendText>
+            </LegendItem>
+            <LegendItem>
+              <LegendDot style={{ backgroundColor: '#004E89' }} />
+              <LegendText>Bench Press</LegendText>
+            </LegendItem>
+            <LegendItem>
+              <LegendDot style={{ backgroundColor: '#00D9C0' }} />
+              <LegendText>Deadlift</LegendText>
+            </LegendItem>
+          </XStack>
         </Card>
       </AnimatedYStack>
 
@@ -158,40 +289,20 @@ export default function ProgressScreen() {
   );
 }
 
-const E1RMList = styled(YStack, {
-  gap: '$md',
-});
-
-const E1RMItem = styled(XStack, {
-  justifyContent: 'space-between',
+const LegendItem = styled(XStack, {
   alignItems: 'center',
-  paddingVertical: '$sm',
-  borderBottomWidth: 1,
-  borderBottomColor: '$gray3',
+  gap: '$xs',
 });
 
-const ExerciseName = styled(TamaguiText, {
-  fontSize: 16,
-  color: '$gray12',
-  flex: 1,
+const LegendDot = styled(YStack, {
+  width: 12,
+  height: 12,
+  borderRadius: 6,
 });
 
-const E1RMValue = styled(TamaguiText, {
-  fontSize: 18,
-  fontWeight: 'bold',
-  color: '$gray12',
-  marginRight: '$md',
-});
-
-const ChangeContainer = styled(XStack, {
-  alignItems: 'center',
-  gap: 4,
-});
-
-const ChangeText = styled(TamaguiText, {
-  fontSize: 14,
-  color: '$success',
-  fontWeight: '600',
+const LegendText = styled(TamaguiText, {
+  fontSize: 12,
+  color: '$gray11',
 });
 
 const SummaryGrid = styled(XStack, {

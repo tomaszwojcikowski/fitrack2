@@ -3,6 +3,7 @@ import { ScrollView } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { getDeviceDisplayInfo, isHighDPIDevice, roundToNearestPixel } from '../utils/imageOptimization';
 
 const AnimatedYStack = Animated.createAnimatedComponent(YStack);
 const AnimatedXStack = Animated.createAnimatedComponent(XStack);
@@ -140,12 +141,16 @@ const MenuSubtitle = styled(TamaguiText, {
 });
 
 export default function ProfileScreen() {
+  const displayInfo = getDeviceDisplayInfo();
+  const isHighDPI = isHighDPIDevice();
+  
   const menuItems = [
     { icon: 'person', title: 'Edit Profile', subtitle: 'Update your personal information' },
     { icon: 'settings', title: 'Settings', subtitle: 'App preferences and configurations' },
     { icon: 'notifications', title: 'Notifications', subtitle: 'Manage your notifications' },
     { icon: 'trophy', title: 'Achievements', subtitle: 'View your milestones' },
     { icon: 'calendar', title: 'Training Schedule', subtitle: 'Manage your workout plan' },
+    { icon: 'smartphone', title: 'Display Info', subtitle: `Pixel Ratio: ${displayInfo.pixelRatio}x ${isHighDPI ? '(High-DPI)' : ''}` },
     { icon: 'help-circle', title: 'Help & Support', subtitle: 'Get help and contact support' },
   ];
 

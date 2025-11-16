@@ -10,6 +10,7 @@ import Animated, {
   FadeIn,
   FadeInDown,
 } from 'react-native-reanimated';
+import { CelebrationAnimation } from '../components';
 
 const AnimatedYStack = Animated.createAnimatedComponent(YStack);
 const AnimatedXStack = Animated.createAnimatedComponent(XStack);
@@ -217,6 +218,8 @@ const AddSetText = styled(TamaguiText, {
 export default function WorkoutScreen() {
   const [workoutStarted, setWorkoutStarted] = useState(false);
   const [sets, setSets] = useState([]);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [workoutStats, setWorkoutStats] = useState({});
   
   const scale = useSharedValue(0);
   
@@ -240,6 +243,24 @@ export default function WorkoutScreen() {
 
   const logSet = (exerciseId) => {
     setSets([...sets, { exerciseId, timestamp: Date.now() }]);
+  };
+
+  const endWorkout = () => {
+    // Calculate workout stats
+    const stats = {
+      duration: '45:32',
+      sets: sets.length || 15,
+      volume: 12450,
+      exercises: exercises.length,
+    };
+    setWorkoutStats(stats);
+    setShowCelebration(true);
+  };
+
+  const handleCloseCelebration = () => {
+    setShowCelebration(false);
+    setWorkoutStarted(false);
+    setSets([]);
   };
 
   if (!workoutStarted) {
@@ -272,7 +293,7 @@ export default function WorkoutScreen() {
           <Ionicons name="time" size={24} color="#FF6B35" />
           <TimerText>00:00</TimerText>
         </TimerContainer>
-        <EndButton>
+        <EndButton onPress={endWorkout}>
           <EndButtonText>End Workout</EndButtonText>
         </EndButton>
       </WorkoutHeader>
@@ -335,6 +356,12 @@ export default function WorkoutScreen() {
           </AnimatedYStack>
         ))}
       </ScrollView>
+
+      <CelebrationAnimation
+        visible={showCelebration}
+        onClose={handleCloseCelebration}
+        stats={workoutStats}
+      />
     </Container>
   );
 }

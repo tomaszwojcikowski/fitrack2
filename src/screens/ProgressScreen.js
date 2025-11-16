@@ -2,14 +2,13 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { ScrollView, Dimensions } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { FadeInDown } from 'react-native-reanimated';
 import { CartesianChart, Line, Bar, useChartPressState } from 'victory-native';
 import { LinearGradient, vec, Circle, useFont } from '@shopify/react-native-skia';
 import { database } from '../database';
 import { calculateE1RM, calculateTotalVolume } from '../utils/e1rmCalculations';
 import { Q } from '@nozbe/watermelondb';
-
-const AnimatedYStack = Animated.createAnimatedComponent(YStack);
+import { AnimatedYStack } from '../utils/animatedComponents';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const Container = styled(ScrollView, {

@@ -2,9 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { Modal, View, StyleSheet } from 'react-native';
 import { styled, YStack, Text as TamaguiText } from '@tamagui/core';
 import LottieView from 'lottie-react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-
-const AnimatedYStack = Animated.createAnimatedComponent(YStack);
+import { FadeIn, FadeOut } from 'react-native-reanimated';
+import { AnimatedYStack } from '../utils/animatedComponents';
 
 const Overlay = styled(YStack, {
   flex: 1,

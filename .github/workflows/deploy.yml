@@ -36,11 +36,9 @@ jobs:
 
       - name: Fix paths for GitHub Pages subdirectory
         run: |
-          # Update index.html to use relative paths
-          sed -i 's|href="/favicon.ico"|href="./favicon.ico"|g' dist/index.html
-          sed -i 's|src="/_expo/|src="./_expo/|g' dist/index.html
-          # Add base tag for proper routing
-          sed -i 's|<head>|<head>\n    <base href="/fitrack2/" />|' dist/index.html
+          # Update index.html to use absolute paths with /fitrack2 prefix
+          sed -i 's|href="/favicon.ico"|href="/fitrack2/favicon.ico"|g' dist/index.html
+          sed -i 's|src="/_expo/|src="/fitrack2/_expo/|g' dist/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

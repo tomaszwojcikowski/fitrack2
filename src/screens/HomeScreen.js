@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { 
+import { 
   useAnimatedStyle, 
   useSharedValue, 
   withSpring, 
@@ -11,9 +11,7 @@ import Animated, {
   Easing
 } from 'react-native-reanimated';
 import { AchievementUnlock } from '../components';
-
-const AnimatedYStack = Animated.createAnimatedComponent(YStack);
-const AnimatedXStack = Animated.createAnimatedComponent(XStack);
+import { AnimatedYStack, AnimatedXStack } from '../utils/animatedComponents';
 
 const Container = styled(YStack, {
   flex: 1,

@@ -3,7 +3,6 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - copilot/add-code-from-md-plan
       - main
   workflow_dispatch:
 

@@ -10,9 +10,10 @@ import {
   FadeIn,
   FadeInDown,
 } from 'react-native-reanimated';
-import { CelebrationAnimation } from '../components';
+import { CelebrationAnimation, ExerciseSubstitutionModal } from '../components';
 import { database } from '../database';
 import { AnimatedYStack, AnimatedXStack } from '../utils/animatedComponents';
+import { updateE1RM } from '../utils/e1rmCalculations';
 
 const Container = styled(YStack, {
   flex: 1,
@@ -217,18 +218,21 @@ const AddSetText = styled(TamaguiText, {
 export default function WorkoutScreen() {
   const [workoutStarted, setWorkoutStarted] = useState(false);
   const [workoutLog, setWorkoutLog] = useState(null);
+  const [workoutTemplate, setWorkoutTemplate] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [exerciseSets, setExerciseSets] = useState({});
   const [showCelebration, setShowCelebration] = useState(false);
   const [workoutStats, setWorkoutStats] = useState({});
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
+  const [selectedExerciseForSubstitution, setSelectedExerciseForSubstitution] = useState(null);
   
   const scale = useSharedValue(0);
   
   useEffect(() => {
     scale.value = withSpring(1);
-    loadExercises();
+    loadWorkoutTemplate();
   }, []);
 
   // Timer effect
@@ -246,10 +250,73 @@ export default function WorkoutScreen() {
     transform: [{ scale: scale.value }],
   }));
 
-  async function loadExercises() {
+  async function loadWorkoutTemplate() {
+    try {
+      // Get the first available workout template (for now)
+      const workoutTemplatesCollection = database.collections.get('workout_templates');
+      const templates = await workoutTemplatesCollection.query().fetch();
+      
+      if (templates.length > 0) {
+        const template = templates[0];
+        setWorkoutTemplate(template);
+        
+        // Get template exercises
+        const templateExercisesCollection = database.collections.get('template_exercises');
+        const templateExercises = await templateExercisesCollection
+          .query()
+          .where('workout_template_id', template.id)
+          .fetch();
+        
+        // Sort by order
+        templateExercises.sort((a, b) => a.order - b.order);
+        
+        // Load the actual exercise records
+        const exercisesCollection = database.collections.get('exercises');
+        const exercisePromises = templateExercises.map(te => 
+          exercisesCollection.find(te.exerciseId)
+        );
+        const workoutExercises = await Promise.all(exercisePromises);
+        
+        setExercises(workoutExercises);
+        
+        // Initialize sets structure based on template prescription
+        const setsData = {};
+        workoutExercises.forEach((ex, index) => {
+          const templateEx = templateExercises[index];
+          const numSets = parseInt(templateEx.sets, 10) || 3;
+          
+          const sets = [];
+          for (let i = 1; i <= numSets; i++) {
+            sets.push({
+              setNumber: i,
+              reps: '',
+              weight: '',
+              rpe: '',
+              logged: false,
+              prescribed: {
+                reps: templateEx.repsPrescribed,
+                rpe: templateEx.rpeTarget,
+                rest: templateEx.restPrescribedSeconds,
+              },
+            });
+          }
+          
+          setsData[ex.id] = sets;
+        });
+        setExerciseSets(setsData);
+      } else {
+        // Fallback to loading random exercises if no templates
+        await loadFallbackExercises();
+      }
+    } catch (error) {
+      console.error('Error loading workout template:', error);
+      await loadFallbackExercises();
+    }
+  }
+
+  async function loadFallbackExercises() {
     try {
       const exercisesCollection = database.collections.get('exercises');
-      // Get some exercises for the workout (first 3 for now)
       const allExercises = await exercisesCollection.query().fetch();
       const workoutExercises = allExercises.slice(0, 3);
       setExercises(workoutExercises);
@@ -265,7 +332,7 @@ export default function WorkoutScreen() {
       });
       setExerciseSets(setsData);
     } catch (error) {
-      console.error('Error loading exercises:', error);
+      console.error('Error loading fallback exercises:', error);
     }
   }
 
@@ -279,7 +346,7 @@ export default function WorkoutScreen() {
         const workoutLogsCollection = database.collections.get('workout_logs');
         const newWorkoutLog = await workoutLogsCollection.create(record => {
           record.userId = 'default-user'; // We'll implement proper user management later
-          record.workoutTemplateId = null;
+          record.workoutTemplateId = workoutTemplate ? workoutTemplate.id : null;
           record.startedAt = now;
           record.completedAt = null;
         });
@@ -298,19 +365,40 @@ export default function WorkoutScreen() {
     }
     
     try {
+      const repsInt = parseInt(reps, 10);
+      const weightFloat = parseFloat(weight);
+      
       await database.write(async () => {
         const loggedSetsCollection = database.collections.get('logged_sets');
         await loggedSetsCollection.create(record => {
           record.workoutLogId = workoutLog.id;
           record.exerciseId = exerciseId;
           record.setNumber = setNumber;
-          record.repsActual = parseInt(reps, 10);
-          record.weight = parseFloat(weight);
+          record.repsActual = repsInt;
+          record.weight = weightFloat;
           record.rpeActual = rpe ? parseFloat(rpe) : null;
           record.rirActual = null;
           record.isWarmup = false;
         });
       });
+      
+      // Update E1RM if this is a PR
+      try {
+        const e1rmResult = await updateE1RM(
+          database,
+          'default-user',
+          exerciseId,
+          weightFloat,
+          repsInt
+        );
+        
+        if (e1rmResult.isNewPR) {
+          console.log(`New PR! E1RM: ${e1rmResult.newE1RM} kg`);
+          // TODO: Show PR notification to user
+        }
+      } catch (error) {
+        console.error('Error updating E1RM:', error);
+      }
       
       // Mark set as logged in UI
       setExerciseSets(prev => ({
@@ -412,6 +500,42 @@ export default function WorkoutScreen() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
+  function openSubstitutionModal(exercise) {
+    setSelectedExerciseForSubstitution(exercise);
+    setShowSubstitutionModal(true);
+  }
+
+  function handleSubstitute(newExercise) {
+    // Find the index of the old exercise
+    const oldExerciseIndex = exercises.findIndex(ex => ex.id === selectedExerciseForSubstitution.id);
+    
+    if (oldExerciseIndex !== -1) {
+      // Replace the exercise in the list
+      const newExercises = [...exercises];
+      newExercises[oldExerciseIndex] = newExercise;
+      setExercises(newExercises);
+      
+      // Transfer the sets data to the new exercise
+      const oldExerciseSets = exerciseSets[selectedExerciseForSubstitution.id];
+      const newSetsData = { ...exerciseSets };
+      delete newSetsData[selectedExerciseForSubstitution.id];
+      
+      // Create new sets structure with same prescription
+      newSetsData[newExercise.id] = oldExerciseSets.map(set => ({
+        ...set,
+        logged: false, // Reset logged status
+        reps: '', // Clear entered values
+        weight: '',
+        rpe: '',
+      }));
+      
+      setExerciseSets(newSetsData);
+    }
+    
+    setShowSubstitutionModal(false);
+    setSelectedExerciseForSubstitution(null);
+  }
+
   if (!workoutStarted) {
     return (
       <Container>
@@ -461,10 +585,14 @@ export default function WorkoutScreen() {
                   <ExerciseInfo>
                     <ExerciseName>{exercise.name}</ExerciseName>
                     <ExercisePrescription>
-                      3 sets × 8-10 reps @ RPE 7-8
+                      {sets.length > 0 && sets[0].prescribed ? (
+                        `${sets.length} sets × ${sets[0].prescribed.reps} reps @ RPE ${sets[0].prescribed.rpe}`
+                      ) : (
+                        `${sets.length} sets`
+                      )}
                     </ExercisePrescription>
                   </ExerciseInfo>
-                  <XStack pressStyle={{ opacity: 0.6 }}>
+                  <XStack pressStyle={{ opacity: 0.6 }} onPress={() => openSubstitutionModal(exercise)}>
                     <Ionicons name="swap-horizontal" size={24} color="#666" />
                   </XStack>
                 </ExerciseHeader>
@@ -482,21 +610,21 @@ export default function WorkoutScreen() {
                       <SetNumber>{set.setNumber}</SetNumber>
                       <StyledInput 
                         keyboardType="numeric"
-                        placeholder="8"
+                        placeholder={set.prescribed?.reps || "8"}
                         value={set.reps}
                         onChangeText={(value) => updateSetData(exercise.id, set.setNumber, 'reps', value)}
                         editable={!set.logged}
                       />
                       <StyledInput 
                         keyboardType="numeric"
-                        placeholder="100"
+                        placeholder="kg"
                         value={set.weight}
                         onChangeText={(value) => updateSetData(exercise.id, set.setNumber, 'weight', value)}
                         editable={!set.logged}
                       />
                       <StyledInput 
                         keyboardType="numeric"
-                        placeholder="8"
+                        placeholder={set.prescribed?.rpe?.toString() || "8"}
                         value={set.rpe}
                         onChangeText={(value) => updateSetData(exercise.id, set.setNumber, 'rpe', value)}
                         editable={!set.logged}
@@ -528,6 +656,13 @@ export default function WorkoutScreen() {
         visible={showCelebration}
         onClose={handleCloseCelebration}
         stats={workoutStats}
+      />
+
+      <ExerciseSubstitutionModal
+        visible={showSubstitutionModal}
+        onClose={() => setShowSubstitutionModal(false)}
+        exercise={selectedExerciseForSubstitution}
+        onSubstitute={handleSubstitute}
       />
     </Container>
   );

@@ -43,6 +43,11 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Initialize EAS project
+        run: eas init --id auto
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
       - name: Determine build profile
         id: build-profile
         run: |

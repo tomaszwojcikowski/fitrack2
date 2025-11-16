@@ -44,7 +44,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Initialize EAS project
-        run: eas init --id auto
+        run: eas init --id ${{ secrets.EXPO_APP_ID }}
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 

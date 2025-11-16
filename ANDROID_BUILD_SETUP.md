@@ -52,16 +52,35 @@ This will:
 3. Name it something like "GitHub Actions"
 4. Copy the token (you won't see it again!)
 
-### 4. Add Token to GitHub Secrets
+### 4. Get Your Expo App ID
+
+After linking your project to Expo (either locally via `eas build:configure` or through the Expo dashboard), you need to get your project's App ID:
+
+1. Go to [https://expo.dev](https://expo.dev) and log in
+2. Navigate to your project
+3. Find your Project ID (also called App ID) in the project settings
+4. Copy this ID - it will look like a UUID (e.g., `12345678-1234-1234-1234-123456789abc`)
+
+### 5. Add Secrets to GitHub
+
+You need to add two secrets to your GitHub repository:
 
 1. Go to your GitHub repository
 2. Navigate to **Settings → Secrets and variables → Actions**
 3. Click **New repository secret**
-4. Name: `EXPO_TOKEN`
-5. Value: Paste your Expo access token
-6. Click **Add secret**
 
-### 5. Update app.json
+**First Secret - EXPO_TOKEN:**
+1. Name: `EXPO_TOKEN`
+2. Value: Paste your Expo access token (from step 3)
+3. Click **Add secret**
+
+**Second Secret - EXPO_APP_ID:**
+1. Click **New repository secret** again
+2. Name: `EXPO_APP_ID`
+3. Value: Paste your Expo Project ID / App ID (from step 4)
+4. Click **Add secret**
+
+### 6. Update app.json
 
 Ensure your `app.json` has the correct configuration:
 
@@ -226,12 +245,17 @@ This triggers the workflow with the `production` profile.
 
 ### Build Fails with "No Expo Token"
 
-**Solution**: Make sure `EXPO_TOKEN` secret is set in GitHub Settings → Secrets
+**Solution**: Make sure `EXPO_TOKEN` secret is set in GitHub Settings → Secrets → Actions
 
-### Build Fails with "EAS project not configured"
+### Build Fails with "Missing App ID" or "EAS project not configured"
 
-**Solution**: This should be automatically handled by the workflow's "Initialize EAS project" step. If it still fails:
+**Solution**: Make sure both required secrets are set:
+- `EXPO_TOKEN` - Your Expo access token
+- `EXPO_APP_ID` - Your Expo Project ID / App ID
+
+If the secrets are set but build still fails:
 - Verify the `owner` field in `app.json` matches your Expo username
+- Verify the `EXPO_APP_ID` secret contains the correct Project ID from your Expo dashboard
 - Check that the `EXPO_TOKEN` secret is valid and has the correct permissions
 - Try running `eas build:configure` locally first to manually link the project
 

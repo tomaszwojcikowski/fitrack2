@@ -96,3 +96,102 @@ export function formatWeight(weight) {
 export function formatVolume(volume) {
   return `${Math.round(volume).toLocaleString()} kg`;
 }
+
+/**
+ * Update or create E1RM record for a user and exercise
+ * Only updates if the new E1RM is higher than the existing one
+ * 
+ * @param {Database} database - WatermelonDB database instance
+ * @param {string} userId - User ID
+ * @param {string} exerciseId - Exercise ID
+ * @param {number} weight - Weight lifted
+ * @param {number} reps - Reps performed
+ * @param {number} timestamp - When the lift occurred
+ */
+export async function updateE1RM(database, userId, exerciseId, weight, reps, timestamp = Date.now()) {
+  // Don't update E1RM for warmup sets or very high rep sets (>15)
+  if (reps > 15) {
+    return { isNewPR: false };
+  }
+  
+  const newE1RM = calculateE1RM(weight, reps);
+  
+  try {
+    const e1rmsCollection = database.collections.get('user_e1rms');
+    
+    // Find existing E1RM for this user and exercise
+    const existingE1RMs = await e1rmsCollection
+      .query()
+      .where('user_id', userId)
+      .where('exercise_id', exerciseId)
+      .fetch();
+    
+    // Sort by weight descending to get the highest
+    const currentBest = existingE1RMs.length > 0
+      ? existingE1RMs.reduce((max, record) => 
+          record.weight > max.weight ? record : max
+        )
+      : null;
+    
+    // Only create new record if this is a new PR (personal record)
+    if (!currentBest || newE1RM > currentBest.weight) {
+      await database.write(async () => {
+        await e1rmsCollection.create(record => {
+          record.userId = userId;
+          record.exerciseId = exerciseId;
+          record.weight = Math.round(newE1RM * 10) / 10; // Round to 1 decimal
+          record.date = timestamp;
+        });
+      });
+      
+      return {
+        isNewPR: true,
+        newE1RM: Math.round(newE1RM * 10) / 10,
+        oldE1RM: currentBest ? currentBest.weight : 0,
+      };
+    }
+    
+    return {
+      isNewPR: false,
+      newE1RM: Math.round(newE1RM * 10) / 10,
+      oldE1RM: currentBest.weight,
+    };
+  } catch (error) {
+    console.error('Error updating E1RM:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the current E1RM for a user and exercise
+ * 
+ * @param {Database} database - WatermelonDB database instance
+ * @param {string} userId - User ID
+ * @param {string} exerciseId - Exercise ID
+ * @returns {number|null} Current E1RM or null if none exists
+ */
+export async function getCurrentE1RM(database, userId, exerciseId) {
+  try {
+    const e1rmsCollection = database.collections.get('user_e1rms');
+    
+    const e1rms = await e1rmsCollection
+      .query()
+      .where('user_id', userId)
+      .where('exercise_id', exerciseId)
+      .fetch();
+    
+    if (e1rms.length === 0) {
+      return null;
+    }
+    
+    // Return the highest E1RM
+    const best = e1rms.reduce((max, record) => 
+      record.weight > max.weight ? record : max
+    );
+    
+    return best.weight;
+  } catch (error) {
+    console.error('Error getting current E1RM:', error);
+    return null;
+  }
+}

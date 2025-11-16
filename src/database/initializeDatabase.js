@@ -1,5 +1,5 @@
 import { database } from './index';
-import { seedExercises, categories } from './seedData';
+import { seedExercises, categories, sampleProgram, exerciseSubstitutions } from './seedData';
 
 let isInitialized = false;
 
@@ -33,8 +33,9 @@ export async function initializeDatabase() {
         }
 
         console.log('Seeding exercises...');
+        const exerciseRecords = {};
         for (const exercise of seedExercises) {
-          await database.collections
+          const exerciseRecord = await database.collections
             .get('exercises')
             .create((record) => {
               record.name = exercise.name;
@@ -43,6 +44,81 @@ export async function initializeDatabase() {
               record.isCustom = exercise.isCustom;
               record.userId = null;
             });
+          exerciseRecords[exercise.name] = exerciseRecord;
+        }
+
+        console.log('Seeding sample program...');
+        // Create program template
+        const programRecord = await database.collections
+          .get('program_templates')
+          .create((record) => {
+            record.name = sampleProgram.name;
+            record.description = sampleProgram.description;
+          });
+
+        // Create phases
+        for (const phase of sampleProgram.phases) {
+          const phaseRecord = await database.collections
+            .get('phase_templates')
+            .create((record) => {
+              record.programTemplateId = programRecord.id;
+              record.name = phase.name;
+              record.order = phase.order;
+            });
+
+          // Create workouts
+          for (const workout of phase.workouts) {
+            const workoutRecord = await database.collections
+              .get('workout_templates')
+              .create((record) => {
+                record.phaseTemplateId = phaseRecord.id;
+                record.name = workout.name;
+                record.dayOfWeek = workout.dayOfWeek;
+              });
+
+            // Create template exercises
+            for (const exercise of workout.exercises) {
+              const exerciseRecord = exerciseRecords[exercise.exerciseName];
+              if (exerciseRecord) {
+                await database.collections
+                  .get('template_exercises')
+                  .create((record) => {
+                    record.workoutTemplateId = workoutRecord.id;
+                    record.exerciseId = exerciseRecord.id;
+                    record.order = exercise.order;
+                    record.sets = exercise.sets;
+                    record.repsPrescribed = exercise.repsPrescribed;
+                    record.restPrescribedSeconds = exercise.restPrescribedSeconds;
+                    record.tempo = exercise.tempo || null;
+                    record.rpeTarget = exercise.rpeTarget;
+                  });
+              }
+            }
+          }
+        }
+
+        console.log('Seeding exercise substitutions...');
+        // Create exercise substitutions
+        for (const sub of exerciseSubstitutions) {
+          const exercise1 = exerciseRecords[sub.exercise1];
+          const exercise2 = exerciseRecords[sub.exercise2];
+          
+          if (exercise1 && exercise2) {
+            // Create bidirectional substitution relationships
+            await database.collections
+              .get('exercise_substitutions')
+              .create((record) => {
+                record.exerciseId = exercise1.id;
+                record.substituteExerciseId = exercise2.id;
+              });
+            
+            await database.collections
+              .get('exercise_substitutions')
+              .create((record) => {
+                record.exerciseId = exercise2.id;
+                record.substituteExerciseId = exercise1.id;
+              });
+          }
         }
       });
 

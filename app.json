@@ -30,9 +30,6 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "publicPath": "/fitrack2/"
-    },
-    "plugins": [
-      "expo-font"
-    ]
+    }
   }
 }

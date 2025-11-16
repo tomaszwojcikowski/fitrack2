@@ -147,6 +147,175 @@ npm run ios
 npm run web
 ```
 
+## 📱 Installing on Your Phone
+
+FiTrack2 can be installed on your physical device in several ways, depending on your needs and platform.
+
+### Option 1: Development Mode (Easiest - Expo Go)
+
+This is the quickest way to test the app on your device without building binaries.
+
+#### Prerequisites
+- Install **Expo Go** app on your phone:
+  - [Android - Google Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
+  - [iOS - App Store](https://apps.apple.com/app/expo-go/id982107779)
+
+#### Steps
+1. Start the development server on your computer:
+   ```bash
+   npm start
+   ```
+
+2. Choose your connection method:
+   - **Same Network (Recommended)**: Scan the QR code displayed in the terminal with:
+     - **iOS**: Open the Camera app and scan the QR code
+     - **Android**: Open Expo Go app and scan the QR code
+   
+   - **Tunnel Mode** (if on different networks):
+     ```bash
+     npm start -- --tunnel
+     ```
+     Then scan the QR code as above
+
+3. The app will load on your phone through Expo Go
+
+**Note**: This method requires the development server to be running. Changes you make to the code will automatically reload on your device.
+
+### Option 2: Production Build (Android APK)
+
+Build a standalone APK that can be installed without Expo Go.
+
+#### Prerequisites
+- [EAS CLI](https://docs.expo.dev/build/setup/): `npm install -g eas-cli`
+- Expo account (free): Sign up at [expo.dev](https://expo.dev)
+
+#### Steps
+
+1. **Configure EAS Build** (first time only):
+   ```bash
+   eas build:configure
+   ```
+
+2. **Build APK for Android**:
+   ```bash
+   # Development build (for testing)
+   eas build -p android --profile preview
+   
+   # Or production build
+   eas build -p android --profile production
+   ```
+
+3. **Download and Install**:
+   - Once the build completes (10-20 minutes), you'll receive a download link
+   - Download the APK file to your Android device
+   - Open the APK file and tap "Install"
+   - You may need to enable "Install from Unknown Sources" in Settings
+
+4. **Enable Installation from Unknown Sources** (if needed):
+   - Go to Settings → Security → Unknown Sources
+   - Or Settings → Apps → Special Access → Install Unknown Apps
+   - Enable for your file manager or browser
+
+### Option 3: Production Build (iOS - TestFlight)
+
+Deploy to TestFlight for iOS testing (requires Apple Developer account).
+
+#### Prerequisites
+- Apple Developer Account ($99/year)
+- EAS CLI: `npm install -g eas-cli`
+
+#### Steps
+
+1. **Configure EAS Build** (first time only):
+   ```bash
+   eas build:configure
+   ```
+
+2. **Build for iOS**:
+   ```bash
+   eas build -p ios --profile production
+   ```
+
+3. **Submit to TestFlight**:
+   ```bash
+   eas submit -p ios
+   ```
+
+4. **Install on Device**:
+   - Install [TestFlight](https://apps.apple.com/app/testflight/id899247664) from App Store
+   - You'll receive an email invitation to test the app
+   - Open the invitation and install the app through TestFlight
+
+### Option 4: Development Build (Recommended for Testing)
+
+Create a development build that includes native code but doesn't require Expo Go.
+
+#### Steps
+
+1. **Build Development Client**:
+   ```bash
+   # For Android
+   eas build --profile development --platform android
+   
+   # For iOS (macOS only)
+   eas build --profile development --platform ios
+   ```
+
+2. **Install the Development Build**:
+   - Download and install the development build on your device
+   - This is a standalone app that connects to your development server
+
+3. **Run the App**:
+   ```bash
+   npm start --dev-client
+   ```
+   
+4. Open the development build app on your device and it will connect to your development server
+
+### Troubleshooting
+
+#### Android APK Won't Install
+- **Solution**: Enable "Install from Unknown Sources" in your device settings
+- Check if the APK file downloaded completely
+- Try downloading again or using a different browser
+
+#### Expo Go Shows Connection Error
+- **Solution**: Ensure your computer and phone are on the same WiFi network
+- Try using tunnel mode: `npm start -- --tunnel`
+- Disable any VPN on your computer or phone
+- Check firewall settings aren't blocking port 19000
+
+#### iOS TestFlight Not Receiving Invitation
+- **Solution**: Check spam folder for invitation email
+- Verify the email address in your Apple Developer account
+- Wait up to 24 hours for processing
+
+#### Build Fails on EAS
+- **Solution**: Check your `eas.json` configuration
+- Ensure all dependencies are compatible
+- Review build logs for specific errors
+- Try clearing cache: `eas build --clear-cache`
+
+#### App Crashes on Startup
+- **Solution**: Check if all native dependencies are properly linked
+- Verify the build profile matches your app configuration
+- Review device logs using ADB (Android) or Xcode (iOS)
+
+### Performance Optimization for OnePlus 12
+
+FiTrack2 is specifically optimized for the OnePlus 12's 120Hz display. To ensure the best performance:
+
+1. **Enable High Refresh Rate**:
+   - Settings → Display → Screen Refresh Rate → 120Hz
+
+2. **Disable Power Saving Mode**: Power saving can limit refresh rate to 60Hz
+
+3. **Close Background Apps**: For the smoothest 120 FPS experience
+
+4. **Enable Developer Options** (for advanced users):
+   - Settings → About Phone → Tap Build Number 7 times
+   - Settings → System → Developer Options → Force Peak Refresh Rate
+
 ## 📦 Deployment
 
 The app is automatically deployed to GitHub Pages on every push to the main or feature branches via GitHub Actions.

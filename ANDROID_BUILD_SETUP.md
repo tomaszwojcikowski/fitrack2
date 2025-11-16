@@ -31,10 +31,12 @@ eas login
 
 ### 2. Configure the Project
 
-The project is already configured with `eas.json`, but you need to link it to your Expo account:
+The project is already configured with `eas.json` and `app.json` (with the `owner` field set). The GitHub Actions workflow will automatically initialize the project with EAS on the first build.
+
+**Optional**: If you want to build locally, you can initialize the project manually:
 
 ```bash
-# Initialize EAS project (first time only)
+# Initialize EAS project (optional for local builds)
 eas build:configure
 ```
 
@@ -150,18 +152,20 @@ The workflow automatically triggers on:
 2. **Setup Node.js**: Installs Node.js 18
 3. **Setup Expo/EAS**: Installs EAS CLI and authenticates
 4. **Install Dependencies**: Runs `npm install`
-5. **Build**: Starts the EAS build process
-6. **Report**: Posts build status and link
+5. **Initialize EAS Project**: Automatically initializes the project with EAS (first time only)
+6. **Build**: Starts the EAS build process
+7. **Report**: Posts build status and link
 
 ### Build Process
 
 When triggered, the workflow:
 
-1. Starts a build on EAS servers (not in GitHub Actions)
-2. EAS handles the actual compilation
-3. Returns immediately with a build ID
-4. Build continues on EAS (typically 10-20 minutes)
-5. You receive an email when the build completes
+1. Initializes the EAS project automatically (if not already initialized)
+2. Starts a build on EAS servers (not in GitHub Actions)
+3. EAS handles the actual compilation
+4. Returns immediately with a build ID
+5. Build continues on EAS (typically 10-20 minutes)
+6. You receive an email when the build completes
 
 ### Getting Your APK
 
@@ -224,9 +228,12 @@ This triggers the workflow with the `production` profile.
 
 **Solution**: Make sure `EXPO_TOKEN` secret is set in GitHub Settings → Secrets
 
-### Build Fails with "Project not found"
+### Build Fails with "EAS project not configured"
 
-**Solution**: Run `eas build:configure` locally first to link the project to your Expo account
+**Solution**: This should be automatically handled by the workflow's "Initialize EAS project" step. If it still fails:
+- Verify the `owner` field in `app.json` matches your Expo username
+- Check that the `EXPO_TOKEN` secret is valid and has the correct permissions
+- Try running `eas build:configure` locally first to manually link the project
 
 ### Build Times Out or Fails
 

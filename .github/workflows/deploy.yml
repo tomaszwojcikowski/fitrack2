@@ -55,7 +55,7 @@ jobs:
           echo ""
           echo "Checking asset paths in JS bundle:"
           if [ -d "dist/_expo/static/js/web/" ]; then
-            find dist/_expo/static/js/web/ -type f -name "*.js" -exec grep -o '"/fitrack2/assets/[^"]*"' {} \; | head -5
+            find dist/_expo/static/js/web/ -type f -name "*.js" -exec grep -o '"/fitrack2/assets/[^"]*"' {} \; | head -5 || echo "No asset paths found in JS files"
           else
             echo "JS bundle directory not found for verification"
           fi

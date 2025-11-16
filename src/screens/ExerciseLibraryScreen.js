@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText, Input } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import { database } from '../database';
 
 const AnimatedYStack = Animated.createAnimatedComponent(YStack);
 const AnimatedXStack = Animated.createAnimatedComponent(XStack);
@@ -144,24 +145,56 @@ const FAB = styled(XStack, {
   },
 });
 
-const EXERCISES = [
-  { id: 1, name: 'Barbell Squat', category: 'Legs', description: 'Compound leg exercise' },
-  { id: 2, name: 'Bench Press', category: 'Chest', description: 'Upper body pressing movement' },
-  { id: 3, name: 'Deadlift', category: 'Back', description: 'Full body compound movement' },
-  { id: 4, name: 'Overhead Press', category: 'Shoulders', description: 'Shoulder pressing movement' },
-  { id: 5, name: 'Bent Over Row', category: 'Back', description: 'Horizontal pulling movement' },
-  { id: 6, name: 'Pull-up', category: 'Back', description: 'Vertical pulling movement' },
-  { id: 7, name: 'Dumbbell Curl', category: 'Arms', description: 'Bicep isolation' },
-  { id: 8, name: 'Tricep Extension', category: 'Arms', description: 'Tricep isolation' },
-];
-
 const CATEGORIES = ['All', 'Legs', 'Chest', 'Back', 'Shoulders', 'Arms'];
+
+// Helper to extract category from description or name
+function extractCategory(exercise) {
+  const name = exercise.name.toLowerCase();
+  const desc = (exercise.description || '').toLowerCase();
+  
+  if (name.includes('squat') || name.includes('lunge') || name.includes('leg') || desc.includes('leg')) return 'Legs';
+  if (name.includes('bench') || name.includes('press') && (name.includes('chest') || name.includes('incline'))) return 'Chest';
+  if (name.includes('push-up') || name.includes('fly') || name.includes('flye') || name.includes('crossover')) return 'Chest';
+  if (name.includes('row') || name.includes('pull') || name.includes('lat') || name.includes('deadlift')) return 'Back';
+  if (name.includes('shoulder') || name.includes('overhead press') || name.includes('arnold') || name.includes('raise')) return 'Shoulders';
+  if (name.includes('curl') || name.includes('tricep') || name.includes('dip') || name.includes('skull')) return 'Arms';
+  
+  return 'Other';
+}
 
 export default function ExerciseLibraryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [exercises, setExercises] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredExercises = EXERCISES.filter(exercise => {
+  useEffect(() => {
+    loadExercises();
+  }, []);
+
+  async function loadExercises() {
+    try {
+      const exercisesCollection = database.collections.get('exercises');
+      const allExercises = await exercisesCollection.query().fetch();
+      
+      // Map database exercises to include computed category
+      const mappedExercises = allExercises.map(ex => ({
+        id: ex.id,
+        name: ex.name,
+        description: ex.description,
+        category: extractCategory(ex),
+        isCustom: ex.isCustom,
+      }));
+      
+      setExercises(mappedExercises);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading exercises:', error);
+      setLoading(false);
+    }
+  }
+
+  const filteredExercises = exercises.filter(exercise => {
     const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || exercise.category === selectedCategory;
     return matchesSearch && matchesCategory;

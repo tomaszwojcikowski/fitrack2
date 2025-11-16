@@ -11,6 +11,7 @@ import Animated, {
   FadeInDown,
 } from 'react-native-reanimated';
 import { CelebrationAnimation } from '../components';
+import { database } from '../database';
 
 const AnimatedYStack = Animated.createAnimatedComponent(YStack);
 const AnimatedXStack = Animated.createAnimatedComponent(XStack);
@@ -217,51 +218,201 @@ const AddSetText = styled(TamaguiText, {
 
 export default function WorkoutScreen() {
   const [workoutStarted, setWorkoutStarted] = useState(false);
-  const [sets, setSets] = useState([]);
+  const [workoutLog, setWorkoutLog] = useState(null);
+  const [exercises, setExercises] = useState([]);
+  const [exerciseSets, setExerciseSets] = useState({});
   const [showCelebration, setShowCelebration] = useState(false);
   const [workoutStats, setWorkoutStats] = useState({});
+  const [startTime, setStartTime] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
   
   const scale = useSharedValue(0);
   
   useEffect(() => {
     scale.value = withSpring(1);
+    loadExercises();
   }, []);
+
+  // Timer effect
+  useEffect(() => {
+    if (workoutStarted && startTime) {
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        setElapsedTime(elapsed);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [workoutStarted, startTime]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
-  
-  const exercises = [
-    { id: 1, name: 'Barbell Squat', sets: '3-5', reps: '5-8', rpe: '8' },
-    { id: 2, name: 'Bench Press', sets: '3-5', reps: '5-8', rpe: '8' },
-    { id: 3, name: 'Bent Over Row', sets: '3', reps: '8-10', rpe: '7-8' },
-  ];
 
-  const startWorkout = () => {
-    setWorkoutStarted(true);
-  };
+  async function loadExercises() {
+    try {
+      const exercisesCollection = database.collections.get('exercises');
+      // Get some exercises for the workout (first 3 for now)
+      const allExercises = await exercisesCollection.query().fetch();
+      const workoutExercises = allExercises.slice(0, 3);
+      setExercises(workoutExercises);
+      
+      // Initialize sets structure for each exercise
+      const setsData = {};
+      workoutExercises.forEach(ex => {
+        setsData[ex.id] = [
+          { setNumber: 1, reps: '', weight: '', rpe: '', logged: false },
+          { setNumber: 2, reps: '', weight: '', rpe: '', logged: false },
+          { setNumber: 3, reps: '', weight: '', rpe: '', logged: false },
+        ];
+      });
+      setExerciseSets(setsData);
+    } catch (error) {
+      console.error('Error loading exercises:', error);
+    }
+  }
 
-  const logSet = (exerciseId) => {
-    setSets([...sets, { exerciseId, timestamp: Date.now() }]);
-  };
+  async function startWorkout() {
+    try {
+      const now = Date.now();
+      setStartTime(now);
+      
+      // Create workout log in database
+      await database.write(async () => {
+        const workoutLogsCollection = database.collections.get('workout_logs');
+        const newWorkoutLog = await workoutLogsCollection.create(record => {
+          record.userId = 'default-user'; // We'll implement proper user management later
+          record.workoutTemplateId = null;
+          record.startedAt = now;
+          record.completedAt = null;
+        });
+        setWorkoutLog(newWorkoutLog);
+      });
+      
+      setWorkoutStarted(true);
+    } catch (error) {
+      console.error('Error starting workout:', error);
+    }
+  }
 
-  const endWorkout = () => {
-    // Calculate workout stats
-    const stats = {
-      duration: '45:32',
-      sets: sets.length || 15,
-      volume: 12450,
-      exercises: exercises.length,
-    };
-    setWorkoutStats(stats);
-    setShowCelebration(true);
-  };
+  async function logSet(exerciseId, setNumber, reps, weight, rpe) {
+    if (!workoutLog || !reps || !weight) {
+      return;
+    }
+    
+    try {
+      await database.write(async () => {
+        const loggedSetsCollection = database.collections.get('logged_sets');
+        await loggedSetsCollection.create(record => {
+          record.workoutLogId = workoutLog.id;
+          record.exerciseId = exerciseId;
+          record.setNumber = setNumber;
+          record.repsActual = parseInt(reps, 10);
+          record.weight = parseFloat(weight);
+          record.rpeActual = rpe ? parseFloat(rpe) : null;
+          record.rirActual = null;
+          record.isWarmup = false;
+        });
+      });
+      
+      // Mark set as logged in UI
+      setExerciseSets(prev => ({
+        ...prev,
+        [exerciseId]: prev[exerciseId].map(set => 
+          set.setNumber === setNumber ? { ...set, logged: true } : set
+        ),
+      }));
+    } catch (error) {
+      console.error('Error logging set:', error);
+    }
+  }
+
+  function updateSetData(exerciseId, setNumber, field, value) {
+    setExerciseSets(prev => ({
+      ...prev,
+      [exerciseId]: prev[exerciseId].map(set =>
+        set.setNumber === setNumber ? { ...set, [field]: value } : set
+      ),
+    }));
+  }
+
+  function addSet(exerciseId) {
+    setExerciseSets(prev => {
+      const currentSets = prev[exerciseId] || [];
+      const newSetNumber = currentSets.length + 1;
+      return {
+        ...prev,
+        [exerciseId]: [
+          ...currentSets,
+          { setNumber: newSetNumber, reps: '', weight: '', rpe: '', logged: false },
+        ],
+      };
+    });
+  }
+
+  async function endWorkout() {
+    try {
+      // Get all logged sets for this workout
+      const loggedSetsCollection = database.collections.get('logged_sets');
+      const allLoggedSets = await loggedSetsCollection
+        .query()
+        .fetch();
+      
+      const workoutSets = allLoggedSets.filter(set => set.workoutLogId === workoutLog.id);
+      
+      // Calculate total volume
+      const totalVolume = workoutSets.reduce((sum, set) => {
+        return sum + (set.weight * set.repsActual);
+      }, 0);
+      
+      // Update workout log with completion time
+      await database.write(async () => {
+        await workoutLog.update(record => {
+          record.completedAt = Date.now();
+        });
+      });
+      
+      // Format elapsed time
+      const minutes = Math.floor(elapsedTime / 60);
+      const seconds = elapsedTime % 60;
+      const durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      const stats = {
+        duration: durationStr,
+        sets: workoutSets.length,
+        volume: Math.round(totalVolume),
+        exercises: exercises.length,
+      };
+      
+      setWorkoutStats(stats);
+      setShowCelebration(true);
+    } catch (error) {
+      console.error('Error ending workout:', error);
+    }
+  }
 
   const handleCloseCelebration = () => {
     setShowCelebration(false);
     setWorkoutStarted(false);
-    setSets([]);
+    setWorkoutLog(null);
+    setElapsedTime(0);
+    setStartTime(null);
+    // Reset exercise sets
+    const setsData = {};
+    exercises.forEach(ex => {
+      setsData[ex.id] = [
+        { setNumber: 1, reps: '', weight: '', rpe: '', logged: false },
+        { setNumber: 2, reps: '', weight: '', rpe: '', logged: false },
+        { setNumber: 3, reps: '', weight: '', rpe: '', logged: false },
+      ];
+    });
+    setExerciseSets(setsData);
   };
+
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
 
   if (!workoutStarted) {
     return (
@@ -291,7 +442,7 @@ export default function WorkoutScreen() {
       <WorkoutHeader>
         <TimerContainer>
           <Ionicons name="time" size={24} color="#FF6B35" />
-          <TimerText>00:00</TimerText>
+          <TimerText>{formatTime(elapsedTime)}</TimerText>
         </TimerContainer>
         <EndButton onPress={endWorkout}>
           <EndButtonText>End Workout</EndButtonText>
@@ -299,62 +450,80 @@ export default function WorkoutScreen() {
       </WorkoutHeader>
 
       <ScrollView>
-        {exercises.map((exercise, index) => (
-          <AnimatedYStack
-            key={exercise.id}
-            entering={FadeInDown.delay(index * 100).springify()}
-          >
-            <ExerciseCard>
-              <ExerciseHeader>
-                <ExerciseNumber>{index + 1}</ExerciseNumber>
-                <ExerciseInfo>
-                  <ExerciseName>{exercise.name}</ExerciseName>
-                  <ExercisePrescription>
-                    {exercise.sets} sets × {exercise.reps} reps @ RPE {exercise.rpe}
-                  </ExercisePrescription>
-                </ExerciseInfo>
-                <XStack pressStyle={{ opacity: 0.6 }}>
-                  <Ionicons name="swap-horizontal" size={24} color="#666" />
-                </XStack>
-              </ExerciseHeader>
+        {exercises.map((exercise, index) => {
+          const sets = exerciseSets[exercise.id] || [];
+          return (
+            <AnimatedYStack
+              key={exercise.id}
+              entering={FadeInDown.delay(index * 100).springify()}
+            >
+              <ExerciseCard>
+                <ExerciseHeader>
+                  <ExerciseNumber>{index + 1}</ExerciseNumber>
+                  <ExerciseInfo>
+                    <ExerciseName>{exercise.name}</ExerciseName>
+                    <ExercisePrescription>
+                      3 sets × 8-10 reps @ RPE 7-8
+                    </ExercisePrescription>
+                  </ExerciseInfo>
+                  <XStack pressStyle={{ opacity: 0.6 }}>
+                    <Ionicons name="swap-horizontal" size={24} color="#666" />
+                  </XStack>
+                </ExerciseHeader>
 
-              <SetsContainer>
-                <SetRow>
-                  <SetHeader>Set</SetHeader>
-                  <SetHeader>Reps</SetHeader>
-                  <SetHeader>Weight (kg)</SetHeader>
-                  <SetHeader>RPE</SetHeader>
-                  <SetHeader>✓</SetHeader>
-                </SetRow>
-                {[1, 2, 3].map((setNum) => (
-                  <SetInputRow key={setNum}>
-                    <SetNumber>{setNum}</SetNumber>
-                    <StyledInput 
-                      keyboardType="numeric"
-                      placeholder="8"
-                    />
-                    <StyledInput 
-                      keyboardType="numeric"
-                      placeholder="100"
-                    />
-                    <StyledInput 
-                      keyboardType="numeric"
-                      placeholder="8"
-                    />
-                    <CheckButton onPress={() => logSet(exercise.id)}>
-                      <Ionicons name="checkmark" size={20} color="#FFF" />
-                    </CheckButton>
-                  </SetInputRow>
-                ))}
-              </SetsContainer>
+                <SetsContainer>
+                  <SetRow>
+                    <SetHeader>Set</SetHeader>
+                    <SetHeader>Reps</SetHeader>
+                    <SetHeader>Weight (kg)</SetHeader>
+                    <SetHeader>RPE</SetHeader>
+                    <SetHeader>✓</SetHeader>
+                  </SetRow>
+                  {sets.map((set) => (
+                    <SetInputRow key={set.setNumber}>
+                      <SetNumber>{set.setNumber}</SetNumber>
+                      <StyledInput 
+                        keyboardType="numeric"
+                        placeholder="8"
+                        value={set.reps}
+                        onChangeText={(value) => updateSetData(exercise.id, set.setNumber, 'reps', value)}
+                        editable={!set.logged}
+                      />
+                      <StyledInput 
+                        keyboardType="numeric"
+                        placeholder="100"
+                        value={set.weight}
+                        onChangeText={(value) => updateSetData(exercise.id, set.setNumber, 'weight', value)}
+                        editable={!set.logged}
+                      />
+                      <StyledInput 
+                        keyboardType="numeric"
+                        placeholder="8"
+                        value={set.rpe}
+                        onChangeText={(value) => updateSetData(exercise.id, set.setNumber, 'rpe', value)}
+                        editable={!set.logged}
+                      />
+                      <CheckButton 
+                        onPress={() => logSet(exercise.id, set.setNumber, set.reps, set.weight, set.rpe)}
+                        style={{ 
+                          backgroundColor: set.logged ? '#22C55E' : '#FF6B35',
+                          opacity: set.logged ? 0.7 : 1,
+                        }}
+                      >
+                        <Ionicons name="checkmark" size={20} color="#FFF" />
+                      </CheckButton>
+                    </SetInputRow>
+                  ))}
+                </SetsContainer>
 
-              <AddSetButton>
-                <Ionicons name="add" size={20} color="#FF6B35" />
-                <AddSetText>Add Set</AddSetText>
-              </AddSetButton>
-            </ExerciseCard>
-          </AnimatedYStack>
-        ))}
+                <AddSetButton onPress={() => addSet(exercise.id)}>
+                  <Ionicons name="add" size={20} color="#FF6B35" />
+                  <AddSetText>Add Set</AddSetText>
+                </AddSetButton>
+              </ExerciseCard>
+            </AnimatedYStack>
+          );
+        })}
       </ScrollView>
 
       <CelebrationAnimation

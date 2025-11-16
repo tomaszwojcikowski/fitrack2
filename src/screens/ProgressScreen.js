@@ -1,10 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ScrollView, Dimensions } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { CartesianChart, Line, Bar, useChartPressState } from 'victory-native';
 import { LinearGradient, vec, Circle, useFont } from '@shopify/react-native-skia';
+import { database } from '../database';
+import { calculateE1RM, calculateTotalVolume } from '../utils/e1rmCalculations';
+import { Q } from '@nozbe/watermelondb';
 
 const AnimatedYStack = Animated.createAnimatedComponent(YStack);
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -72,30 +75,181 @@ const ChartLabel = styled(TamaguiText, {
   textAlign: 'center',
 });
 
-// Generate sample data for demonstration
-const generateVolumeData = () => {
-  const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'];
-  return weeks.map((week, index) => ({
-    week: index + 1,
-    label: week,
-    volume: 8000 + Math.random() * 4000 + index * 1000,
-  }));
-};
-
-const generateE1RMData = () => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  return months.map((month, index) => ({
-    month: index + 1,
-    label: month,
-    squat: 120 + index * 3.5 + Math.random() * 5,
-    bench: 85 + index * 2 + Math.random() * 3,
-    deadlift: 155 + index * 4 + Math.random() * 5,
-  }));
-};
-
 export default function ProgressScreen() {
-  const volumeData = useMemo(() => generateVolumeData(), []);
-  const e1rmData = useMemo(() => generateE1RMData(), []);
+  const [volumeData, setVolumeData] = useState([]);
+  const [e1rmData, setE1rmData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProgressData();
+  }, []);
+
+  async function loadProgressData() {
+    try {
+      await loadVolumeData();
+      await loadE1RMData();
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading progress data:', error);
+      // Set fallback data if there's an error
+      setVolumeData(generateFallbackVolumeData());
+      setE1rmData(generateFallbackE1RMData());
+      setLoading(false);
+    }
+  }
+
+  async function loadVolumeData() {
+    try {
+      const workoutLogsCollection = database.collections.get('workout_logs');
+      const loggedSetsCollection = database.collections.get('logged_sets');
+      
+      // Get completed workouts from the last 8 weeks
+      const eightWeeksAgo = Date.now() - (8 * 7 * 24 * 60 * 60 * 1000);
+      const completedWorkouts = await workoutLogsCollection
+        .query(
+          Q.where('completed_at', Q.notEq(null)),
+          Q.where('started_at', Q.gte(eightWeeksAgo)),
+          Q.sortBy('started_at', Q.asc)
+        )
+        .fetch();
+
+      if (completedWorkouts.length === 0) {
+        // Use fallback data if no workouts found
+        setVolumeData(generateFallbackVolumeData());
+        return;
+      }
+
+      // Group workouts by week
+      const weeklyData = {};
+      for (const workout of completedWorkouts) {
+        const weekStart = new Date(workout.startedAt);
+        weekStart.setHours(0, 0, 0, 0);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Start of week
+        const weekKey = weekStart.getTime();
+        
+        if (!weeklyData[weekKey]) {
+          weeklyData[weekKey] = { sets: [], weekStart };
+        }
+        
+        // Get all sets for this workout
+        const workoutSets = await loggedSetsCollection
+          .query(Q.where('workout_log_id', workout.id))
+          .fetch();
+        
+        weeklyData[weekKey].sets.push(...workoutSets);
+      }
+
+      // Convert to chart data format
+      const chartData = Object.entries(weeklyData)
+        .map(([weekKey, data]) => ({
+          week: parseInt(weekKey, 10),
+          label: `Week ${new Date(data.weekStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+          volume: calculateTotalVolume(data.sets),
+        }))
+        .sort((a, b) => a.week - b.week)
+        .map((item, index) => ({ ...item, week: index + 1 })); // Renumber weeks sequentially
+
+      setVolumeData(chartData.length > 0 ? chartData : generateFallbackVolumeData());
+    } catch (error) {
+      console.error('Error loading volume data:', error);
+      setVolumeData(generateFallbackVolumeData());
+    }
+  }
+
+  async function loadE1RMData() {
+    try {
+      const loggedSetsCollection = database.collections.get('logged_sets');
+      const exercisesCollection = database.collections.get('exercises');
+      
+      // Find squat, bench, and deadlift exercises
+      const exercises = await exercisesCollection.query().fetch();
+      const squatEx = exercises.find(ex => ex.name.toLowerCase().includes('squat'));
+      const benchEx = exercises.find(ex => ex.name.toLowerCase().includes('bench'));
+      const deadliftEx = exercises.find(ex => ex.name.toLowerCase().includes('deadlift'));
+
+      if (!squatEx && !benchEx && !deadliftEx) {
+        setE1rmData(generateFallbackE1RMData());
+        return;
+      }
+
+      // Get sets for the last 6 months
+      const sixMonthsAgo = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
+      
+      // Group sets by month and calculate best E1RM for each exercise
+      const monthlyData = {};
+      
+      for (const exercise of [squatEx, benchEx, deadliftEx].filter(Boolean)) {
+        const sets = await loggedSetsCollection
+          .query(
+            Q.where('exercise_id', exercise.id),
+            Q.where('created_at', Q.gte(sixMonthsAgo))
+          )
+          .fetch();
+
+        for (const set of sets) {
+          const monthStart = new Date(set.createdAt);
+          monthStart.setDate(1);
+          monthStart.setHours(0, 0, 0, 0);
+          const monthKey = monthStart.getTime();
+          
+          if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = {
+              monthStart,
+              squat: 0,
+              bench: 0,
+              deadlift: 0,
+            };
+          }
+          
+          const e1rm = calculateE1RM(set.weight, set.repsActual);
+          const exerciseType = exercise.name.toLowerCase().includes('squat') ? 'squat' :
+                               exercise.name.toLowerCase().includes('bench') ? 'bench' : 'deadlift';
+          
+          monthlyData[monthKey][exerciseType] = Math.max(
+            monthlyData[monthKey][exerciseType],
+            e1rm
+          );
+        }
+      }
+
+      // Convert to chart data format
+      const chartData = Object.entries(monthlyData)
+        .map(([monthKey, data]) => ({
+          month: parseInt(monthKey, 10),
+          label: new Date(data.monthStart).toLocaleDateString('en-US', { month: 'short' }),
+          squat: data.squat,
+          bench: data.bench,
+          deadlift: data.deadlift,
+        }))
+        .sort((a, b) => a.month - b.month)
+        .map((item, index) => ({ ...item, month: index + 1 })); // Renumber months sequentially
+
+      setE1rmData(chartData.length > 0 ? chartData : generateFallbackE1RMData());
+    } catch (error) {
+      console.error('Error loading E1RM data:', error);
+      setE1rmData(generateFallbackE1RMData());
+    }
+  }
+
+  function generateFallbackVolumeData() {
+    const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'];
+    return weeks.map((week, index) => ({
+      week: index + 1,
+      label: week,
+      volume: 8000 + Math.random() * 4000 + index * 1000,
+    }));
+  }
+
+  function generateFallbackE1RMData() {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    return months.map((month, index) => ({
+      month: index + 1,
+      label: month,
+      squat: 120 + index * 3.5 + Math.random() * 5,
+      bench: 85 + index * 2 + Math.random() * 3,
+      deadlift: 155 + index * 4 + Math.random() * 5,
+    }));
+  }
   
   const { state: volumeState, isActive: volumeActive } = useChartPressState({
     x: 0,

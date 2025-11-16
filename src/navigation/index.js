@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { Platform } from 'react-native';
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -12,9 +13,23 @@ import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
+// Configure linking for web with base path support
+const linking = {
+  prefixes: ['https://tomaszwojcikowski.github.io/fitrack2', 'http://localhost:8081'],
+  config: {
+    screens: {
+      Home: '',
+      Workout: 'workout',
+      Progress: 'progress',
+      Library: 'library',
+      Profile: 'profile',
+    },
+  },
+};
+
 export default function Navigation() {
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={Platform.OS === 'web' ? linking : undefined}>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           tabBarIcon: ({ focused, color, size }) => {

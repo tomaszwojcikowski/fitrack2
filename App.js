@@ -10,8 +10,19 @@ import { ErrorBoundary } from './src/components';
 
 export default function App() {
   const [isDbReady, setIsDbReady] = useState(false);
+  const [isConfigReady, setIsConfigReady] = useState(false);
+  const [providerConfig, setProviderConfig] = useState(tamaguiConfig);
 
   useEffect(() => {
+    if (tamaguiConfig && tamaguiConfig.tokens) {
+      console.log('Tamagui config loaded successfully');
+      setIsConfigReady(true);
+    } else {
+      console.error('Tamagui config failed to load properly');
+      setProviderConfig({ themes: { light: {} }, tokens: {} });
+      setIsConfigReady(true);
+    }
+
     initializeDatabase()
       .then(() => {
         console.log('Database ready');
@@ -24,7 +35,7 @@ export default function App() {
       });
   }, []);
 
-  if (!isDbReady) {
+  if (!isDbReady || !isConfigReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#FF6B35" />
@@ -35,7 +46,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+        <TamaguiProvider config={providerConfig || tamaguiConfig} defaultTheme="light">
           <Navigation />
           <StatusBar style="light" />
         </TamaguiProvider>

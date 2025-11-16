@@ -97,17 +97,46 @@ jobs:
         if: steps.build.outcome == 'success'
         id: build-info
         run: |
-          # Get the latest build ID
-          BUILD_ID=$(eas build:list --platform android --limit 1 --json | jq -r '.[0].id')
-          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
-          echo "### 🚀 Build Started" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Build Profile: \`${{ steps.build-profile.outputs.profile }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "Build ID: \`$BUILD_ID\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "View build status: [EAS Build Dashboard](https://expo.dev/accounts/${{ github.repository_owner }}/projects/fitrack2/builds/$BUILD_ID)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The build is now in progress. You will receive an email when it's complete." >> $GITHUB_STEP_SUMMARY
+          # Get the latest build ID with proper error handling
+          BUILD_LIST=$(eas build:list --platform android --limit 1 --json 2>&1) || {
+            echo "::warning::Failed to fetch build list, but build was submitted successfully"
+            echo "### 🚀 Build Started" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Build Profile: \`${{ steps.build-profile.outputs.profile }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The build has been submitted to EAS. Check your email or visit the [EAS Build Dashboard](https://expo.dev/accounts/${{ github.repository_owner }}/projects/fitrack2/builds) to track progress." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          }
+
+          # Check if the output is valid JSON and contains builds
+          if echo "$BUILD_LIST" | jq -e '. | length > 0' >/dev/null 2>&1; then
+            BUILD_ID=$(echo "$BUILD_LIST" | jq -r '.[0].id')
+            if [ -n "$BUILD_ID" ] && [ "$BUILD_ID" != "null" ]; then
+              echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+              echo "### 🚀 Build Started" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "Build Profile: \`${{ steps.build-profile.outputs.profile }}\`" >> $GITHUB_STEP_SUMMARY
+              echo "Build ID: \`$BUILD_ID\`" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "View build status: [EAS Build Dashboard](https://expo.dev/accounts/${{ github.repository_owner }}/projects/fitrack2/builds/$BUILD_ID)" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "The build is now in progress. You will receive an email when it's complete." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "::warning::Build ID could not be determined"
+              echo "### 🚀 Build Started" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "Build Profile: \`${{ steps.build-profile.outputs.profile }}\`" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "The build has been submitted to EAS. Check your email or visit the [EAS Build Dashboard](https://expo.dev/accounts/${{ github.repository_owner }}/projects/fitrack2/builds) to track progress." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "::warning::No builds found in the list, but build was submitted successfully"
+            echo "### 🚀 Build Started" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Build Profile: \`${{ steps.build-profile.outputs.profile }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The build has been submitted to EAS. Check your email or visit the [EAS Build Dashboard](https://expo.dev/accounts/${{ github.repository_owner }}/projects/fitrack2/builds) to track progress." >> $GITHUB_STEP_SUMMARY
+          fi
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 

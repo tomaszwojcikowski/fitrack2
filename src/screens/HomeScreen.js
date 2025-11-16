@@ -12,6 +12,9 @@ import {
 } from 'react-native-reanimated';
 import { AchievementUnlock } from '../components';
 import { AnimatedYStack, AnimatedXStack } from '../utils/animatedComponents';
+import { database } from '../database';
+import { Q } from '@nozbe/watermelondb';
+import { calculateTotalVolume, calculateAverageRPE } from '../utils/e1rmCalculations';
 
 const Container = styled(YStack, {
   flex: 1,

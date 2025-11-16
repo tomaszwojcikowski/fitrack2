@@ -149,11 +149,40 @@ npm run web
 
 ## 📱 Installing on Your Phone
 
-FiTrack2 can be installed on your physical device in several ways, depending on your needs and platform.
+### 🎯 Recommended: Download Pre-built APK (Android)
 
-### Option 1: Development Mode (Easiest - Expo Go)
+**This is the easiest and most convenient method for Android devices!**
 
-This is the quickest way to test the app on your device without building binaries.
+The app is automatically built and available for download whenever changes are pushed to the main branch.
+
+#### Steps:
+
+1. **Get the APK**:
+   - Go to the [GitHub Actions page](https://github.com/tomaszwojcikowski/fitrack2/actions/workflows/build-android.yml)
+   - Click on the latest successful build
+   - Follow the EAS build link in the summary
+   - Download the APK file (approximately 50-100 MB)
+
+2. **Install on Your Android Device**:
+   - Transfer the APK to your phone (via USB, email, cloud storage, or direct download)
+   - Open the APK file on your Android device
+   - Tap "Install" (you may need to enable "Install from Unknown Sources")
+   - Launch FiTrack2 and start tracking your workouts! 💪
+
+3. **Enable Installation from Unknown Sources** (if needed):
+   - Go to **Settings → Security → Unknown Sources** and enable it
+   - Or **Settings → Apps → Special Access → Install Unknown Apps** and enable for your browser/file manager
+
+**Automatic Builds**: Every push to `main` triggers a new build, so you always have access to the latest version!
+
+---
+
+### Alternative Methods
+
+<details>
+<summary><b>Option 1: Development Mode with Expo Go</b> (Quick Testing)</summary>
+
+Use this if you want to test the app during development without building binaries.
 
 #### Prerequisites
 - Install **Expo Go** app on your phone:
@@ -166,24 +195,25 @@ This is the quickest way to test the app on your device without building binarie
    npm start
    ```
 
-2. Choose your connection method:
-   - **Same Network (Recommended)**: Scan the QR code displayed in the terminal with:
-     - **iOS**: Open the Camera app and scan the QR code
-     - **Android**: Open Expo Go app and scan the QR code
+2. Scan the QR code:
+   - **iOS**: Open the Camera app and scan the QR code
+   - **Android**: Open Expo Go app and scan the QR code
    
-   - **Tunnel Mode** (if on different networks):
-     ```bash
-     npm start -- --tunnel
-     ```
-     Then scan the QR code as above
+   If on different networks, use tunnel mode:
+   ```bash
+   npm start -- --tunnel
+   ```
 
-3. The app will load on your phone through Expo Go
+3. The app loads on your phone through Expo Go
 
-**Note**: This method requires the development server to be running. Changes you make to the code will automatically reload on your device.
+**Note**: Development server must be running. Code changes reload automatically.
 
-### Option 2: Production Build (Android APK)
+</details>
 
-Build a standalone APK that can be installed without Expo Go.
+<details>
+<summary><b>Option 2: Build Your Own APK</b> (Custom Builds)</summary>
+
+Build a standalone APK yourself using EAS Build.
 
 #### Prerequisites
 - [EAS CLI](https://docs.expo.dev/build/setup/): `npm install -g eas-cli`
@@ -191,14 +221,14 @@ Build a standalone APK that can be installed without Expo Go.
 
 #### Steps
 
-1. **Configure EAS Build** (first time only):
+1. **Login to EAS**:
    ```bash
-   eas build:configure
+   eas login
    ```
 
 2. **Build APK for Android**:
    ```bash
-   # Development build (for testing)
+   # Preview build (recommended for testing)
    eas build -p android --profile preview
    
    # Or production build
@@ -206,17 +236,14 @@ Build a standalone APK that can be installed without Expo Go.
    ```
 
 3. **Download and Install**:
-   - Once the build completes (10-20 minutes), you'll receive a download link
-   - Download the APK file to your Android device
-   - Open the APK file and tap "Install"
-   - You may need to enable "Install from Unknown Sources" in Settings
+   - Build completes in 10-20 minutes
+   - Download the APK from the provided link
+   - Install on your Android device
 
-4. **Enable Installation from Unknown Sources** (if needed):
-   - Go to Settings → Security → Unknown Sources
-   - Or Settings → Apps → Special Access → Install Unknown Apps
-   - Enable for your file manager or browser
+</details>
 
-### Option 3: Production Build (iOS - TestFlight)
+<details>
+<summary><b>Option 3: iOS Installation via TestFlight</b></summary>
 
 Deploy to TestFlight for iOS testing (requires Apple Developer account).
 
@@ -226,9 +253,9 @@ Deploy to TestFlight for iOS testing (requires Apple Developer account).
 
 #### Steps
 
-1. **Configure EAS Build** (first time only):
+1. **Login to EAS**:
    ```bash
-   eas build:configure
+   eas login
    ```
 
 2. **Build for iOS**:
@@ -244,11 +271,18 @@ Deploy to TestFlight for iOS testing (requires Apple Developer account).
 4. **Install on Device**:
    - Install [TestFlight](https://apps.apple.com/app/testflight/id899247664) from App Store
    - You'll receive an email invitation to test the app
-   - Open the invitation and install the app through TestFlight
+   - Open the invitation and install through TestFlight
 
-### Option 4: Development Build (Recommended for Testing)
+</details>
 
-Create a development build that includes native code but doesn't require Expo Go.
+---
+
+### 🔧 For Developers: Development Build
+
+<details>
+<summary><b>Advanced: Development Build with Hot Reload</b></summary>
+
+Create a development build for native code testing with hot reload capabilities.
 
 #### Steps
 
@@ -261,16 +295,18 @@ Create a development build that includes native code but doesn't require Expo Go
    eas build --profile development --platform ios
    ```
 
-2. **Install the Development Build**:
-   - Download and install the development build on your device
-   - This is a standalone app that connects to your development server
+2. **Install on Device**:
+   - Download and install the development build
+   - This is a standalone app that connects to your dev server
 
-3. **Run the App**:
+3. **Run the Development Server**:
    ```bash
    npm start --dev-client
    ```
    
-4. Open the development build app on your device and it will connect to your development server
+4. **Connect**: Open the development build app and it will auto-connect to your server
+
+</details>
 
 ### Troubleshooting
 

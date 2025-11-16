@@ -2,11 +2,9 @@ import React from 'react';
 import { ScrollView } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { FadeInDown } from 'react-native-reanimated';
 import { getDeviceDisplayInfo, isHighDPIDevice, roundToNearestPixel } from '../utils/imageOptimization';
-
-const AnimatedYStack = Animated.createAnimatedComponent(YStack);
-const AnimatedXStack = Animated.createAnimatedComponent(XStack);
+import { AnimatedYStack, AnimatedXStack } from '../utils/animatedComponents';
 
 const Container = styled(ScrollView, {
   flex: 1,

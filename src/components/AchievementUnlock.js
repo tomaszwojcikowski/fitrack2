@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Modal, View, StyleSheet } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { 
+import { 
   FadeInUp, 
   FadeOut,
   useAnimatedStyle,
@@ -11,9 +11,7 @@ import Animated, {
   withSequence,
   withDelay,
 } from 'react-native-reanimated';
-
-const AnimatedYStack = Animated.createAnimatedComponent(YStack);
-const AnimatedXStack = Animated.createAnimatedComponent(XStack);
+import { AnimatedYStack, AnimatedXStack } from '../utils/animatedComponents';
 
 const Overlay = styled(YStack, {
   flex: 1,

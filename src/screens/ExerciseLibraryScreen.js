@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView } from 'react-native';
 import { styled, YStack, XStack, Text as TamaguiText, Input } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { database } from '../database';
-
-const AnimatedYStack = Animated.createAnimatedComponent(YStack);
-const AnimatedXStack = Animated.createAnimatedComponent(XStack);
+import { AnimatedYStack, AnimatedXStack } from '../utils/animatedComponents';
 
 const Container = styled(YStack, {
   flex: 1,

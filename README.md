@@ -122,7 +122,7 @@ git clone https://github.com/tomaszwojcikowski/fitrack2.git
 cd fitrack2
 
 # Install dependencies
-npm install --legacy-peer-deps
+npm install
 
 # Start development server
 npm start
@@ -133,6 +133,8 @@ npm run web
 # Build for web
 npm run build:web
 ```
+
+> **Note**: The project includes a `.npmrc` file that configures npm to use legacy peer dependency resolution. This allows React 19 to work alongside dependencies that don't yet officially support it.
 
 ### Platform-Specific Commands
 

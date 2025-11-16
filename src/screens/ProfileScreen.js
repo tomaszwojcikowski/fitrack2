@@ -1,6 +1,143 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { ScrollView } from 'react-native';
+import { styled, YStack, XStack, Text as TamaguiText } from '@tamagui/core';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+const AnimatedYStack = Animated.createAnimatedComponent(YStack);
+const AnimatedXStack = Animated.createAnimatedComponent(XStack);
+
+const Container = styled(ScrollView, {
+  flex: 1,
+  backgroundColor: '$gray2',
+});
+
+const Header = styled(YStack, {
+  alignItems: 'center',
+  backgroundColor: '$background',
+  padding: '$xl',
+  borderBottomWidth: 1,
+  borderBottomColor: '$gray3',
+});
+
+const AvatarContainer = styled(YStack, {
+  position: 'relative',
+  marginBottom: '$md',
+});
+
+const Avatar = styled(YStack, {
+  width: 100,
+  height: 100,
+  borderRadius: 50,
+  backgroundColor: '$primary',
+  justifyContent: 'center',
+  alignItems: 'center',
+});
+
+const EditAvatarButton = styled(XStack, {
+  position: 'absolute',
+  right: 0,
+  bottom: 0,
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: '$gray12',
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderWidth: 2,
+  borderColor: '$background',
+  pressStyle: {
+    scale: 0.9,
+  },
+});
+
+const Name = styled(TamaguiText, {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: '$gray12',
+  marginBottom: '$xs',
+});
+
+const Email = styled(TamaguiText, {
+  fontSize: 16,
+  color: '$gray10',
+});
+
+const StatsContainer = styled(XStack, {
+  backgroundColor: '$background',
+  padding: '$lg',
+  justifyContent: 'space-around',
+  borderBottomWidth: 1,
+  borderBottomColor: '$gray3',
+});
+
+const StatItem = styled(YStack, {
+  alignItems: 'center',
+});
+
+const StatDivider = styled(YStack, {
+  width: 1,
+  backgroundColor: '$gray3',
+});
+
+const StatValue = styled(TamaguiText, {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: '$primary',
+  marginBottom: '$xs',
+});
+
+const StatLabel = styled(TamaguiText, {
+  fontSize: 12,
+  color: '$gray10',
+});
+
+const MenuContainer = styled(YStack, {
+  padding: '$md',
+  gap: '$sm',
+});
+
+const MenuItem = styled(XStack, {
+  backgroundColor: '$background',
+  padding: '$md',
+  borderRadius: '$lg',
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 8,
+  elevation: 3,
+  pressStyle: {
+    backgroundColor: '$gray1',
+    scale: 0.98,
+  },
+});
+
+const MenuIconContainer = styled(YStack, {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: '$gray2',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginRight: '$md',
+});
+
+const MenuInfo = styled(YStack, {
+  flex: 1,
+});
+
+const MenuTitle = styled(TamaguiText, {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '$gray12',
+  marginBottom: 4,
+});
+
+const MenuSubtitle = styled(TamaguiText, {
+  fontSize: 14,
+  color: '$gray10',
+});
 
 export default function ProfileScreen() {
   const menuItems = [
@@ -13,200 +150,96 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={48} color="#FFF" />
-          </View>
-          <TouchableOpacity style={styles.editAvatarButton}>
-            <Ionicons name="camera" size={16} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.name}>John Doe</Text>
-        <Text style={styles.email}>john.doe@example.com</Text>
-      </View>
+    <Container>
+      <AnimatedYStack entering={FadeInDown.springify()}>
+        <Header>
+          <AvatarContainer>
+            <Avatar>
+              <Ionicons name="person" size={48} color="#FFF" />
+            </Avatar>
+            <EditAvatarButton>
+              <Ionicons name="camera" size={16} color="#FFF" />
+            </EditAvatarButton>
+          </AvatarContainer>
+          <Name>John Doe</Name>
+          <Email>john.doe@example.com</Email>
+        </Header>
+      </AnimatedYStack>
 
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>156</Text>
-          <Text style={styles.statLabel}>Total Workouts</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>24</Text>
-          <Text style={styles.statLabel}>Streak Days</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>42</Text>
-          <Text style={styles.statLabel}>PRs Set</Text>
-        </View>
-      </View>
+      <AnimatedXStack entering={FadeInDown.delay(100).springify()}>
+        <StatsContainer>
+          <StatItem>
+            <StatValue>156</StatValue>
+            <StatLabel>Total Workouts</StatLabel>
+          </StatItem>
+          <StatDivider />
+          <StatItem>
+            <StatValue>24</StatValue>
+            <StatLabel>Streak Days</StatLabel>
+          </StatItem>
+          <StatDivider />
+          <StatItem>
+            <StatValue>42</StatValue>
+            <StatLabel>PRs Set</StatLabel>
+          </StatItem>
+        </StatsContainer>
+      </AnimatedXStack>
 
-      <View style={styles.menuContainer}>
+      <MenuContainer>
         {menuItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem}>
-            <View style={styles.menuIconContainer}>
-              <Ionicons name={item.icon} size={24} color="#FF6B35" />
-            </View>
-            <View style={styles.menuContent}>
-              <Text style={styles.menuTitle}>{item.title}</Text>
-              <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#666" />
-          </TouchableOpacity>
+          <AnimatedYStack key={index} entering={FadeInDown.delay(200 + index * 50).springify()}>
+            <MenuItem>
+              <MenuIconContainer>
+                <Ionicons name={item.icon} size={24} color="#FF6B35" />
+              </MenuIconContainer>
+              <MenuInfo>
+                <MenuTitle>{item.title}</MenuTitle>
+                <MenuSubtitle>{item.subtitle}</MenuSubtitle>
+              </MenuInfo>
+              <Ionicons name="chevron-forward" size={24} color="#666" />
+            </MenuItem>
+          </AnimatedYStack>
         ))}
-      </View>
+      </MenuContainer>
 
-      <TouchableOpacity style={styles.logoutButton}>
-        <Ionicons name="log-out" size={20} color="#EF4444" />
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
+      <AnimatedYStack entering={FadeInDown.delay(500).springify()}>
+        <LogoutButton>
+          <Ionicons name="log-out" size={20} color="#EF4444" />
+          <LogoutText>Log Out</LogoutText>
+        </LogoutButton>
+      </AnimatedYStack>
 
-      <Text style={styles.version}>Version 1.0.0</Text>
-    </ScrollView>
+      <AnimatedYStack entering={FadeInDown.delay(600).springify()}>
+        <Version>Version 1.0.0</Version>
+      </AnimatedYStack>
+    </Container>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
+const LogoutButton = styled(XStack, {
+  backgroundColor: '$background',
+  margin: '$md',
+  padding: '$md',
+  borderRadius: '$lg',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '$sm',
+  borderWidth: 1,
+  borderColor: '$error',
+  pressStyle: {
+    backgroundColor: '$gray1',
   },
-  header: {
-    backgroundColor: '#FFF',
-    padding: 24,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#004E89',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#FFF',
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  email: {
-    fontSize: 14,
-    color: '#666',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    margin: 16,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#E5E5E5',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  menuContainer: {
-    backgroundColor: '#FFF',
-    marginHorizontal: 16,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  menuIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFF5F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  menuContent: {
-    flex: 1,
-  },
-  menuTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  menuSubtitle: {
-    fontSize: 12,
-    color: '#666',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 16,
-    padding: 16,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#EF4444',
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#EF4444',
-    marginLeft: 8,
-  },
-  version: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 24,
-  },
+});
+
+const LogoutText = styled(TamaguiText, {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '$error',
+});
+
+const Version = styled(TamaguiText, {
+  fontSize: 14,
+  color: '$gray10',
+  textAlign: 'center',
+  paddingVertical: '$xl',
 });

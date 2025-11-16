@@ -1,8 +1,9 @@
-import { createTamagui, createTokens } from '@tamagui/core';
+import { createTamagui } from '@tamagui/core';
 import { config } from '@tamagui/config/v3';
 
 // Fitness app color scheme - inspired by modern fitness apps
-const tokens = createTokens({
+// We extend the base tokens with our custom colors
+const customTokens = {
   color: {
     // Primary colors for the fitness theme
     primary: '#FF6B35',
@@ -88,29 +89,62 @@ const tokens = createTokens({
     high: 100,
     modal: 1000,
   },
-});
+};
 
+// Merge tokens properly - extend the base tokens from v3 config
+const mergedTokens = {
+  ...config.tokens,
+  color: {
+    ...config.tokens.color,
+    ...customTokens.color,
+  },
+  space: {
+    ...config.tokens.space,
+    ...customTokens.space,
+  },
+  size: {
+    ...config.tokens.size,
+    ...customTokens.size,
+  },
+  radius: {
+    ...config.tokens.radius,
+    ...customTokens.radius,
+  },
+  zIndex: {
+    ...config.tokens.zIndex,
+    ...customTokens.zIndex,
+  },
+};
+
+// Custom themes that extend the base themes
+const customThemes = {
+  light: {
+    background: customTokens.color.background,
+    color: customTokens.color.text,
+    primary: customTokens.color.primary,
+    secondary: customTokens.color.secondary,
+    accent: customTokens.color.accent,
+  },
+  dark: {
+    background: customTokens.color.backgroundDark,
+    color: customTokens.color.textDark,
+    primary: customTokens.color.primary,
+    secondary: customTokens.color.secondary,
+    accent: customTokens.color.accent,
+  },
+};
+
+// Create the Tamagui config by properly extending the v3 config
 const tamaguiConfig = createTamagui({
   ...config,
-  tokens,
+  tokens: mergedTokens,
   themes: {
-    light: {
-      background: tokens.color.background,
-      color: tokens.color.text,
-      primary: tokens.color.primary,
-      secondary: tokens.color.secondary,
-      accent: tokens.color.accent,
-    },
-    dark: {
-      background: tokens.color.backgroundDark,
-      color: tokens.color.textDark,
-      primary: tokens.color.primary,
-      secondary: tokens.color.secondary,
-      accent: tokens.color.accent,
-    },
+    ...config.themes,
+    ...customThemes,
   },
 });
 
 export default tamaguiConfig;
 
-export { tokens };
+// Export tokens for use in components
+export const tokens = customTokens;

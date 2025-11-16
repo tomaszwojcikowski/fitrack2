@@ -34,8 +34,18 @@ jobs:
       - name: Build web app
         run: npm run build:web
 
-      - name: Fix paths for GitHub Pages subdirectory
+      - name: Prepare for GitHub Pages deployment
         run: |
+          # Add .nojekyll to prevent Jekyll processing
+          touch dist/.nojekyll
+          echo "Created .nojekyll file"
+          
+          # Verify build output structure
+          echo ""
+          echo "Build output structure:"
+          find dist -type f | head -20
+          echo ""
+          
           # Fix absolute paths in index.html to include /fitrack2/ prefix
           sed -i 's|href="/favicon.ico"|href="/fitrack2/favicon.ico"|g' dist/index.html
           sed -i 's|src="/_expo/|src="/fitrack2/_expo/|g' dist/index.html
@@ -52,6 +62,11 @@ jobs:
           echo ""
           echo "Modified index.html:"
           cat dist/index.html
+          echo ""
+          echo "Verifying critical files exist:"
+          ls -lh dist/index.html
+          ls -lh dist/favicon.ico || echo "Warning: favicon.ico not found"
+          ls -lh dist/_expo/static/js/web/ 2>/dev/null | head -5 || echo "Warning: JS bundle not found"
           echo ""
           echo "Checking asset paths in JS bundle:"
           if [ -d "dist/_expo/static/js/web/" ]; then

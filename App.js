@@ -6,6 +6,7 @@ import { ActivityIndicator, View } from 'react-native';
 import Navigation from './src/navigation';
 import tamaguiConfig from './src/theme/tamagui.config';
 import { initializeDatabase } from './src/database/initializeDatabase';
+import { ErrorBoundary } from './src/components';
 
 export default function App() {
   const [isDbReady, setIsDbReady] = useState(false);
@@ -32,11 +33,13 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
-        <Navigation />
-        <StatusBar style="light" />
-      </TamaguiProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+          <Navigation />
+          <StatusBar style="light" />
+        </TamaguiProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }

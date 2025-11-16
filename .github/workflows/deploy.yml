@@ -41,14 +41,24 @@ jobs:
           sed -i 's|src="/_expo/|src="/fitrack2/_expo/|g' dist/index.html
           
           # Fix asset paths in the JavaScript bundle
-          find dist/_expo/static/js/web/ -type f -name "*.js" -exec sed -i 's|"/assets/|"/fitrack2/assets/|g' {} \; || echo "No JS files found to fix"
+          if [ -d "dist/_expo/static/js/web/" ]; then
+            find dist/_expo/static/js/web/ -type f -name "*.js" -exec sed -i 's|"/assets/|"/fitrack2/assets/|g' {} \;
+            echo "Fixed asset paths in JS bundle"
+          else
+            echo "Warning: JS bundle directory not found"
+          fi
           
           # Verify the changes
+          echo ""
           echo "Modified index.html:"
           cat dist/index.html
           echo ""
           echo "Checking asset paths in JS bundle:"
-          grep -o '"/fitrack2/assets/[^"]*"' dist/_expo/static/js/web/*.js 2>/dev/null | head -5 || echo "No asset paths found"
+          if [ -d "dist/_expo/static/js/web/" ]; then
+            find dist/_expo/static/js/web/ -type f -name "*.js" -exec grep -o '"/fitrack2/assets/[^"]*"' {} \; | head -5
+          else
+            echo "JS bundle directory not found for verification"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

@@ -46,7 +46,17 @@ const tokens = createTokens({
     gray7: '#525252',
     gray8: '#404040',
     gray9: '#262626',
-    gray10: '#171717',
+    gray10: '#666666',
+    gray11: '#333333',
+    gray12: '#1A1A1A',
+    
+    // Utility colors
+    white: '#FFFFFF',
+    black: '#000000',
+    
+    // Success variants
+    successDark: '#16A34A',
+    successLight: '#4ADE80',
   },
   space: {
     xs: 4,

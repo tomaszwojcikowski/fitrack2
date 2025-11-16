@@ -194,6 +194,35 @@ export const categories = [
   { name: 'Arms', description: 'Arm exercises' },
 ];
 
+// Exercise substitutions - exercises that can substitute for each other
+export const exerciseSubstitutions = [
+  // Chest substitutions
+  { exercise1: 'Barbell Bench Press', exercise2: 'Dumbbell Flyes' },
+  { exercise1: 'Barbell Bench Press', exercise2: 'Push-ups' },
+  { exercise1: 'Incline Dumbbell Press', exercise2: 'Barbell Bench Press' },
+  { exercise1: 'Push-ups', exercise2: 'Cable Crossover' },
+  
+  // Back substitutions
+  { exercise1: 'Pull-ups', exercise2: 'Lat Pulldown' },
+  { exercise1: 'Bent Over Row', exercise2: 'T-Bar Row' },
+  { exercise1: 'Bent Over Row', exercise2: 'Seated Cable Row' },
+  { exercise1: 'Lat Pulldown', exercise2: 'Seated Cable Row' },
+  
+  // Leg substitutions
+  { exercise1: 'Barbell Squat', exercise2: 'Leg Press' },
+  { exercise1: 'Romanian Deadlift', exercise2: 'Leg Curl' },
+  { exercise1: 'Walking Lunges', exercise2: 'Leg Press' },
+  
+  // Shoulder substitutions
+  { exercise1: 'Overhead Press', exercise2: 'Arnold Press' },
+  { exercise1: 'Lateral Raises', exercise2: 'Front Raises' },
+  
+  // Arm substitutions
+  { exercise1: 'Barbell Curl', exercise2: 'Hammer Curls' },
+  { exercise1: 'Tricep Dips', exercise2: 'Skull Crushers' },
+  { exercise1: 'Skull Crushers', exercise2: 'Cable Tricep Pushdown' },
+];
+
 // Sample workout program following the development plan
 export const sampleProgram = {
   name: 'Beginner Strength Program',

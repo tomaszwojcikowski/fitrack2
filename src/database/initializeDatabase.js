@@ -1,5 +1,5 @@
 import { database } from './index';
-import { seedExercises, categories, sampleProgram } from './seedData';
+import { seedExercises, categories, sampleProgram, exerciseSubstitutions } from './seedData';
 
 let isInitialized = false;
 
@@ -94,6 +94,30 @@ export async function initializeDatabase() {
                   });
               }
             }
+          }
+        }
+
+        console.log('Seeding exercise substitutions...');
+        // Create exercise substitutions
+        for (const sub of exerciseSubstitutions) {
+          const exercise1 = exerciseRecords[sub.exercise1];
+          const exercise2 = exerciseRecords[sub.exercise2];
+          
+          if (exercise1 && exercise2) {
+            // Create bidirectional substitution relationships
+            await database.collections
+              .get('exercise_substitutions')
+              .create((record) => {
+                record.exerciseId = exercise1.id;
+                record.substituteExerciseId = exercise2.id;
+              });
+            
+            await database.collections
+              .get('exercise_substitutions')
+              .create((record) => {
+                record.exerciseId = exercise2.id;
+                record.substituteExerciseId = exercise1.id;
+              });
           }
         }
       });

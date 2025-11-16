@@ -10,7 +10,7 @@ import {
   FadeIn,
   FadeInDown,
 } from 'react-native-reanimated';
-import { CelebrationAnimation } from '../components';
+import { CelebrationAnimation, ExerciseSubstitutionModal } from '../components';
 import { database } from '../database';
 import { AnimatedYStack, AnimatedXStack } from '../utils/animatedComponents';
 import { updateE1RM } from '../utils/e1rmCalculations';
@@ -225,6 +225,8 @@ export default function WorkoutScreen() {
   const [workoutStats, setWorkoutStats] = useState({});
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
+  const [selectedExerciseForSubstitution, setSelectedExerciseForSubstitution] = useState(null);
   
   const scale = useSharedValue(0);
   
@@ -498,6 +500,42 @@ export default function WorkoutScreen() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
+  function openSubstitutionModal(exercise) {
+    setSelectedExerciseForSubstitution(exercise);
+    setShowSubstitutionModal(true);
+  }
+
+  function handleSubstitute(newExercise) {
+    // Find the index of the old exercise
+    const oldExerciseIndex = exercises.findIndex(ex => ex.id === selectedExerciseForSubstitution.id);
+    
+    if (oldExerciseIndex !== -1) {
+      // Replace the exercise in the list
+      const newExercises = [...exercises];
+      newExercises[oldExerciseIndex] = newExercise;
+      setExercises(newExercises);
+      
+      // Transfer the sets data to the new exercise
+      const oldExerciseSets = exerciseSets[selectedExerciseForSubstitution.id];
+      const newSetsData = { ...exerciseSets };
+      delete newSetsData[selectedExerciseForSubstitution.id];
+      
+      // Create new sets structure with same prescription
+      newSetsData[newExercise.id] = oldExerciseSets.map(set => ({
+        ...set,
+        logged: false, // Reset logged status
+        reps: '', // Clear entered values
+        weight: '',
+        rpe: '',
+      }));
+      
+      setExerciseSets(newSetsData);
+    }
+    
+    setShowSubstitutionModal(false);
+    setSelectedExerciseForSubstitution(null);
+  }
+
   if (!workoutStarted) {
     return (
       <Container>
@@ -554,7 +592,7 @@ export default function WorkoutScreen() {
                       )}
                     </ExercisePrescription>
                   </ExerciseInfo>
-                  <XStack pressStyle={{ opacity: 0.6 }}>
+                  <XStack pressStyle={{ opacity: 0.6 }} onPress={() => openSubstitutionModal(exercise)}>
                     <Ionicons name="swap-horizontal" size={24} color="#666" />
                   </XStack>
                 </ExerciseHeader>
@@ -618,6 +656,13 @@ export default function WorkoutScreen() {
         visible={showCelebration}
         onClose={handleCloseCelebration}
         stats={workoutStats}
+      />
+
+      <ExerciseSubstitutionModal
+        visible={showSubstitutionModal}
+        onClose={() => setShowSubstitutionModal(false)}
+        exercise={selectedExerciseForSubstitution}
+        onSubstitute={handleSubstitute}
       />
     </Container>
   );

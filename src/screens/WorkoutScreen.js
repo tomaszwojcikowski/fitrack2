@@ -218,6 +218,7 @@ const AddSetText = styled(TamaguiText, {
 export default function WorkoutScreen() {
   const [workoutStarted, setWorkoutStarted] = useState(false);
   const [workoutLog, setWorkoutLog] = useState(null);
+  const [workoutTemplate, setWorkoutTemplate] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [exerciseSets, setExerciseSets] = useState({});
   const [showCelebration, setShowCelebration] = useState(false);
@@ -229,7 +230,7 @@ export default function WorkoutScreen() {
   
   useEffect(() => {
     scale.value = withSpring(1);
-    loadExercises();
+    loadWorkoutTemplate();
   }, []);
 
   // Timer effect
@@ -247,10 +248,73 @@ export default function WorkoutScreen() {
     transform: [{ scale: scale.value }],
   }));
 
-  async function loadExercises() {
+  async function loadWorkoutTemplate() {
+    try {
+      // Get the first available workout template (for now)
+      const workoutTemplatesCollection = database.collections.get('workout_templates');
+      const templates = await workoutTemplatesCollection.query().fetch();
+      
+      if (templates.length > 0) {
+        const template = templates[0];
+        setWorkoutTemplate(template);
+        
+        // Get template exercises
+        const templateExercisesCollection = database.collections.get('template_exercises');
+        const templateExercises = await templateExercisesCollection
+          .query()
+          .where('workout_template_id', template.id)
+          .fetch();
+        
+        // Sort by order
+        templateExercises.sort((a, b) => a.order - b.order);
+        
+        // Load the actual exercise records
+        const exercisesCollection = database.collections.get('exercises');
+        const exercisePromises = templateExercises.map(te => 
+          exercisesCollection.find(te.exerciseId)
+        );
+        const workoutExercises = await Promise.all(exercisePromises);
+        
+        setExercises(workoutExercises);
+        
+        // Initialize sets structure based on template prescription
+        const setsData = {};
+        workoutExercises.forEach((ex, index) => {
+          const templateEx = templateExercises[index];
+          const numSets = parseInt(templateEx.sets, 10) || 3;
+          
+          const sets = [];
+          for (let i = 1; i <= numSets; i++) {
+            sets.push({
+              setNumber: i,
+              reps: '',
+              weight: '',
+              rpe: '',
+              logged: false,
+              prescribed: {
+                reps: templateEx.repsPrescribed,
+                rpe: templateEx.rpeTarget,
+                rest: templateEx.restPrescribedSeconds,
+              },
+            });
+          }
+          
+          setsData[ex.id] = sets;
+        });
+        setExerciseSets(setsData);
+      } else {
+        // Fallback to loading random exercises if no templates
+        await loadFallbackExercises();
+      }
+    } catch (error) {
+      console.error('Error loading workout template:', error);
+      await loadFallbackExercises();
+    }
+  }
+
+  async function loadFallbackExercises() {
     try {
       const exercisesCollection = database.collections.get('exercises');
-      // Get some exercises for the workout (first 3 for now)
       const allExercises = await exercisesCollection.query().fetch();
       const workoutExercises = allExercises.slice(0, 3);
       setExercises(workoutExercises);
@@ -266,7 +330,7 @@ export default function WorkoutScreen() {
       });
       setExerciseSets(setsData);
     } catch (error) {
-      console.error('Error loading exercises:', error);
+      console.error('Error loading fallback exercises:', error);
     }
   }
 
@@ -280,7 +344,7 @@ export default function WorkoutScreen() {
         const workoutLogsCollection = database.collections.get('workout_logs');
         const newWorkoutLog = await workoutLogsCollection.create(record => {
           record.userId = 'default-user'; // We'll implement proper user management later
-          record.workoutTemplateId = null;
+          record.workoutTemplateId = workoutTemplate ? workoutTemplate.id : null;
           record.startedAt = now;
           record.completedAt = null;
         });
@@ -483,7 +547,11 @@ export default function WorkoutScreen() {
                   <ExerciseInfo>
                     <ExerciseName>{exercise.name}</ExerciseName>
                     <ExercisePrescription>
-                      3 sets × 8-10 reps @ RPE 7-8
+                      {sets.length > 0 && sets[0].prescribed ? (
+                        `${sets.length} sets × ${sets[0].prescribed.reps} reps @ RPE ${sets[0].prescribed.rpe}`
+                      ) : (
+                        `${sets.length} sets`
+                      )}
                     </ExercisePrescription>
                   </ExerciseInfo>
                   <XStack pressStyle={{ opacity: 0.6 }}>
@@ -504,21 +572,21 @@ export default function WorkoutScreen() {
                       <SetNumber>{set.setNumber}</SetNumber>
                       <StyledInput 
                         keyboardType="numeric"
-                        placeholder="8"
+                        placeholder={set.prescribed?.reps || "8"}
                         value={set.reps}
                         onChangeText={(value) => updateSetData(exercise.id, set.setNumber, 'reps', value)}
                         editable={!set.logged}
                       />
                       <StyledInput 
                         keyboardType="numeric"
-                        placeholder="100"
+                        placeholder="kg"
                         value={set.weight}
                         onChangeText={(value) => updateSetData(exercise.id, set.setNumber, 'weight', value)}
                         editable={!set.logged}
                       />
                       <StyledInput 
                         keyboardType="numeric"
-                        placeholder="8"
+                        placeholder={set.prescribed?.rpe?.toString() || "8"}
                         value={set.rpe}
                         onChangeText={(value) => updateSetData(exercise.id, set.setNumber, 'rpe', value)}
                         editable={!set.logged}

@@ -147,6 +147,211 @@ npm run ios
 npm run web
 ```
 
+## 📱 Installing on Your Phone
+
+### 🎯 Recommended: Download Pre-built APK (Android)
+
+**This is the easiest and most convenient method for Android devices!**
+
+The app is automatically built and available for download whenever changes are pushed to the main branch.
+
+#### Steps:
+
+1. **Get the APK**:
+   - Go to the [GitHub Actions page](https://github.com/tomaszwojcikowski/fitrack2/actions/workflows/build-android.yml)
+   - Click on the latest successful build
+   - Follow the EAS build link in the summary
+   - Download the APK file (approximately 50-100 MB)
+
+2. **Install on Your Android Device**:
+   - Transfer the APK to your phone (via USB, email, cloud storage, or direct download)
+   - Open the APK file on your Android device
+   - Tap "Install" (you may need to enable "Install from Unknown Sources")
+   - Launch FiTrack2 and start tracking your workouts! 💪
+
+3. **Enable Installation from Unknown Sources** (if needed):
+   - Go to **Settings → Security → Unknown Sources** and enable it
+   - Or **Settings → Apps → Special Access → Install Unknown Apps** and enable for your browser/file manager
+
+**Automatic Builds**: Every push to `main` triggers a new build, so you always have access to the latest version!
+
+---
+
+### Alternative Methods
+
+<details>
+<summary><b>Option 1: Development Mode with Expo Go</b> (Quick Testing)</summary>
+
+Use this if you want to test the app during development without building binaries.
+
+#### Prerequisites
+- Install **Expo Go** app on your phone:
+  - [Android - Google Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
+  - [iOS - App Store](https://apps.apple.com/app/expo-go/id982107779)
+
+#### Steps
+1. Start the development server on your computer:
+   ```bash
+   npm start
+   ```
+
+2. Scan the QR code:
+   - **iOS**: Open the Camera app and scan the QR code
+   - **Android**: Open Expo Go app and scan the QR code
+   
+   If on different networks, use tunnel mode:
+   ```bash
+   npm start -- --tunnel
+   ```
+
+3. The app loads on your phone through Expo Go
+
+**Note**: Development server must be running. Code changes reload automatically.
+
+</details>
+
+<details>
+<summary><b>Option 2: Build Your Own APK</b> (Custom Builds)</summary>
+
+Build a standalone APK yourself using EAS Build.
+
+#### Prerequisites
+- [EAS CLI](https://docs.expo.dev/build/setup/): `npm install -g eas-cli`
+- Expo account (free): Sign up at [expo.dev](https://expo.dev)
+
+#### Steps
+
+1. **Login to EAS**:
+   ```bash
+   eas login
+   ```
+
+2. **Build APK for Android**:
+   ```bash
+   # Preview build (recommended for testing)
+   eas build -p android --profile preview
+   
+   # Or production build
+   eas build -p android --profile production
+   ```
+
+3. **Download and Install**:
+   - Build completes in 10-20 minutes
+   - Download the APK from the provided link
+   - Install on your Android device
+
+</details>
+
+<details>
+<summary><b>Option 3: iOS Installation via TestFlight</b></summary>
+
+Deploy to TestFlight for iOS testing (requires Apple Developer account).
+
+#### Prerequisites
+- Apple Developer Account ($99/year)
+- EAS CLI: `npm install -g eas-cli`
+
+#### Steps
+
+1. **Login to EAS**:
+   ```bash
+   eas login
+   ```
+
+2. **Build for iOS**:
+   ```bash
+   eas build -p ios --profile production
+   ```
+
+3. **Submit to TestFlight**:
+   ```bash
+   eas submit -p ios
+   ```
+
+4. **Install on Device**:
+   - Install [TestFlight](https://apps.apple.com/app/testflight/id899247664) from App Store
+   - You'll receive an email invitation to test the app
+   - Open the invitation and install through TestFlight
+
+</details>
+
+---
+
+### 🔧 For Developers: Development Build
+
+<details>
+<summary><b>Advanced: Development Build with Hot Reload</b></summary>
+
+Create a development build for native code testing with hot reload capabilities.
+
+#### Steps
+
+1. **Build Development Client**:
+   ```bash
+   # For Android
+   eas build --profile development --platform android
+   
+   # For iOS (macOS only)
+   eas build --profile development --platform ios
+   ```
+
+2. **Install on Device**:
+   - Download and install the development build
+   - This is a standalone app that connects to your dev server
+
+3. **Run the Development Server**:
+   ```bash
+   npm start --dev-client
+   ```
+   
+4. **Connect**: Open the development build app and it will auto-connect to your server
+
+</details>
+
+### Troubleshooting
+
+#### Android APK Won't Install
+- **Solution**: Enable "Install from Unknown Sources" in your device settings
+- Check if the APK file downloaded completely
+- Try downloading again or using a different browser
+
+#### Expo Go Shows Connection Error
+- **Solution**: Ensure your computer and phone are on the same WiFi network
+- Try using tunnel mode: `npm start -- --tunnel`
+- Disable any VPN on your computer or phone
+- Check firewall settings aren't blocking port 19000
+
+#### iOS TestFlight Not Receiving Invitation
+- **Solution**: Check spam folder for invitation email
+- Verify the email address in your Apple Developer account
+- Wait up to 24 hours for processing
+
+#### Build Fails on EAS
+- **Solution**: Check your `eas.json` configuration
+- Ensure all dependencies are compatible
+- Review build logs for specific errors
+- Try clearing cache: `eas build --clear-cache`
+
+#### App Crashes on Startup
+- **Solution**: Check if all native dependencies are properly linked
+- Verify the build profile matches your app configuration
+- Review device logs using ADB (Android) or Xcode (iOS)
+
+### Performance Optimization for OnePlus 12
+
+FiTrack2 is specifically optimized for the OnePlus 12's 120Hz display. To ensure the best performance:
+
+1. **Enable High Refresh Rate**:
+   - Settings → Display → Screen Refresh Rate → 120Hz
+
+2. **Disable Power Saving Mode**: Power saving can limit refresh rate to 60Hz
+
+3. **Close Background Apps**: For the smoothest 120 FPS experience
+
+4. **Enable Developer Options** (for advanced users):
+   - Settings → About Phone → Tap Build Number 7 times
+   - Settings → System → Developer Options → Force Peak Refresh Rate
+
 ## 📦 Deployment
 
 The app is automatically deployed to GitHub Pages on every push to the main or feature branches via GitHub Actions.

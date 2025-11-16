@@ -13,13 +13,17 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tomaszwojcikowski.fitrack2"
     },
     "android": {
+      "package": "com.tomaszwojcikowski.fitrack2",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [],
       "edgeToEdgeEnabled": true
     },
     "web": {

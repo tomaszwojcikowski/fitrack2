@@ -12,6 +12,9 @@ import {
 } from 'react-native-reanimated';
 import { AchievementUnlock } from '../components';
 import { AnimatedYStack, AnimatedXStack } from '../utils/animatedComponents';
+import { database } from '../database';
+import { Q } from '@nozbe/watermelondb';
+import { calculateTotalVolume, calculateAverageRPE } from '../utils/e1rmCalculations';
 
 const Container = styled(YStack, {
   flex: 1,
@@ -84,6 +87,13 @@ const ActivityItem = styled(XStack, {
 
 export default function HomeScreen({ navigation }) {
   const [showAchievement, setShowAchievement] = useState(false);
+  const [stats, setStats] = useState({
+    monthlyWorkouts: 0,
+    totalVolume: 0,
+    avgRPE: 0,
+    loading: true,
+  });
+  const [recentActivity, setRecentActivity] = useState([]);
   
   const headerOpacity = useSharedValue(0);
   const cardScale = useSharedValue(0.9);
@@ -93,6 +103,9 @@ export default function HomeScreen({ navigation }) {
     headerOpacity.value = withTiming(1, { duration: 500, easing: Easing.ease });
     cardScale.value = withSpring(1, { damping: 15 });
     statsOpacity.value = withDelay(200, withTiming(1, { duration: 500 }));
+    
+    loadStats();
+    loadRecentActivity();
     
     // Demo: Show achievement after 2 seconds
     const timer = setTimeout(() => {
@@ -114,9 +127,110 @@ export default function HomeScreen({ navigation }) {
     opacity: statsOpacity.value,
   }));
 
+  async function loadStats() {
+    try {
+      const workoutLogsCollection = database.collections.get('workout_logs');
+      const loggedSetsCollection = database.collections.get('logged_sets');
+
+      // Get workouts from this month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const monthlyWorkouts = await workoutLogsCollection
+        .query(
+          Q.where('completed_at', Q.notEq(null)),
+          Q.where('started_at', Q.gte(startOfMonth))
+        )
+        .fetch();
+
+      // Get sets from last 7 days for average RPE
+      const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+      const recentWorkouts = await workoutLogsCollection
+        .query(
+          Q.where('completed_at', Q.notEq(null)),
+          Q.where('started_at', Q.gte(sevenDaysAgo))
+        )
+        .fetch();
+
+      let allRecentSets = [];
+      for (const workout of recentWorkouts) {
+        const sets = await loggedSetsCollection
+          .query(Q.where('workout_log_id', workout.id))
+          .fetch();
+        allRecentSets.push(...sets);
+      }
+
+      // Calculate total volume this month
+      let allMonthlySets = [];
+      for (const workout of monthlyWorkouts) {
+        const sets = await loggedSetsCollection
+          .query(Q.where('workout_log_id', workout.id))
+          .fetch();
+        allMonthlySets.push(...sets);
+      }
+
+      const totalVolume = calculateTotalVolume(allMonthlySets);
+      const avgRPE = calculateAverageRPE(allRecentSets);
+
+      setStats({
+        monthlyWorkouts: monthlyWorkouts.length,
+        totalVolume: Math.round(totalVolume),
+        avgRPE: avgRPE > 0 ? avgRPE.toFixed(1) : '-',
+        loading: false,
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      setStats({
+        monthlyWorkouts: 0,
+        totalVolume: 0,
+        avgRPE: '-',
+        loading: false,
+      });
+    }
+  }
+
+  async function loadRecentActivity() {
+    try {
+      const workoutLogsCollection = database.collections.get('workout_logs');
+      const recentWorkouts = await workoutLogsCollection
+        .query(
+          Q.where('completed_at', Q.notEq(null)),
+          Q.sortBy('completed_at', Q.desc)
+        )
+        .fetch();
+
+      const activities = recentWorkouts.slice(0, 2).map(workout => {
+        const completedDate = new Date(workout.completedAt);
+        const now = new Date();
+        const hoursAgo = Math.floor((now - completedDate) / (1000 * 60 * 60));
+        
+        let timeAgo;
+        if (hoursAgo < 1) {
+          timeAgo = 'Just now';
+        } else if (hoursAgo < 24) {
+          timeAgo = `${hoursAgo} hour${hoursAgo > 1 ? 's' : ''} ago`;
+        } else {
+          const daysAgo = Math.floor(hoursAgo / 24);
+          timeAgo = daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`;
+        }
+
+        return {
+          id: workout.id,
+          type: 'workout',
+          title: 'Completed: Workout Session',
+          timeAgo,
+        };
+      });
+
+      setRecentActivity(activities);
+    } catch (error) {
+      console.error('Error loading recent activity:', error);
+      setRecentActivity([]);
+    }
+  }
+
   const todayWorkout = {
-    name: 'Upper Body - Day 1',
-    exercises: 5,
+    name: 'Workout Session',
+    exercises: 3,
     duration: '45 min',
   };
 
@@ -174,7 +288,7 @@ export default function HomeScreen({ navigation }) {
           <StatsContainer>
             <StatCard>
               <TamaguiText fontSize={24} fontWeight="bold" color="$primary" marginBottom="$xs">
-                12
+                {stats.loading ? '...' : stats.monthlyWorkouts}
               </TamaguiText>
               <TamaguiText fontSize={12} fontWeight="600" color="$text" marginBottom={2}>
                 Workouts
@@ -185,7 +299,7 @@ export default function HomeScreen({ navigation }) {
             </StatCard>
             <StatCard>
               <TamaguiText fontSize={24} fontWeight="bold" color="$primary" marginBottom="$xs">
-                4,320
+                {stats.loading ? '...' : stats.totalVolume.toLocaleString()}
               </TamaguiText>
               <TamaguiText fontSize={12} fontWeight="600" color="$text" marginBottom={2}>
                 Total Volume
@@ -196,7 +310,7 @@ export default function HomeScreen({ navigation }) {
             </StatCard>
             <StatCard>
               <TamaguiText fontSize={24} fontWeight="bold" color="$primary" marginBottom="$xs">
-                8.5
+                {stats.loading ? '...' : stats.avgRPE}
               </TamaguiText>
               <TamaguiText fontSize={12} fontWeight="600" color="$text" marginBottom={2}>
                 Avg RPE
@@ -212,32 +326,30 @@ export default function HomeScreen({ navigation }) {
           <TamaguiText fontSize={20} fontWeight="bold" color="$text" marginBottom="$md">
             Recent Activity
           </TamaguiText>
-          <ActivityItem>
-            <YStack marginRight="$sm">
-              <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
-            </YStack>
-            <YStack flex={1}>
-              <TamaguiText fontSize={14} fontWeight="600" color="$text" marginBottom="$xs">
-                Completed: Full Body Workout
-              </TamaguiText>
-              <TamaguiText fontSize={12} color="$textLight">
-                2 hours ago
-              </TamaguiText>
-            </YStack>
-          </ActivityItem>
-          <ActivityItem>
-            <YStack marginRight="$sm">
-              <Ionicons name="trophy" size={24} color="#F59E0B" />
-            </YStack>
-            <YStack flex={1}>
-              <TamaguiText fontSize={14} fontWeight="600" color="$text" marginBottom="$xs">
-                New PR: Squat 140kg
-              </TamaguiText>
-              <TamaguiText fontSize={12} color="$textLight">
-                Yesterday
+          {recentActivity.length > 0 ? (
+            recentActivity.map((activity, index) => (
+              <ActivityItem key={activity.id} style={{ borderBottomWidth: index === recentActivity.length - 1 ? 0 : 1 }}>
+                <YStack marginRight="$sm">
+                  <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
+                </YStack>
+                <YStack flex={1}>
+                  <TamaguiText fontSize={14} fontWeight="600" color="$text" marginBottom="$xs">
+                    {activity.title}
+                  </TamaguiText>
+                  <TamaguiText fontSize={12} color="$textLight">
+                    {activity.timeAgo}
+                  </TamaguiText>
+                </YStack>
+              </ActivityItem>
+            ))
+          ) : (
+            <YStack padding="$lg" alignItems="center">
+              <Ionicons name="fitness-outline" size={48} color="#ccc" style={{ marginBottom: 8 }} />
+              <TamaguiText fontSize={14} color="$textLight" textAlign="center">
+                No workouts yet. Start your first workout to see your activity here!
               </TamaguiText>
             </YStack>
-          </ActivityItem>
+          )}
         </Card>
 
         <AchievementUnlock

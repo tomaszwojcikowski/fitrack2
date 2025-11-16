@@ -40,9 +40,15 @@ jobs:
           sed -i 's|href="/favicon.ico"|href="/fitrack2/favicon.ico"|g' dist/index.html
           sed -i 's|src="/_expo/|src="/fitrack2/_expo/|g' dist/index.html
           
+          # Fix asset paths in the JavaScript bundle
+          find dist/_expo/static/js/web/ -name "*.js" -exec sed -i 's|"/assets/|"/fitrack2/assets/|g' {} \;
+          
           # Verify the changes
           echo "Modified index.html:"
           cat dist/index.html
+          echo ""
+          echo "Checking asset paths in JS bundle:"
+          grep -o '"/fitrack2/assets/[^"]*"' dist/_expo/static/js/web/*.js | head -5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
